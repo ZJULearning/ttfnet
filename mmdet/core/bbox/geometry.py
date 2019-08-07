@@ -61,3 +61,10 @@ def bbox_overlaps(bboxes1, bboxes2, mode='iou', is_aligned=False):
             ious = overlap / (area1[:, None])
 
     return ious
+
+def bbox_areas(bboxes, keep_axis=False):
+    x_min, y_min, x_max, y_max = bboxes[:, 0], bboxes[:, 1], bboxes[:, 2], bboxes[:, 3]
+    areas = (y_max - y_min + 1) * (x_max - x_min + 1)
+    if keep_axis:
+        return areas[:, None]
+    return areas

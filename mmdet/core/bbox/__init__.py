@@ -1,6 +1,6 @@
 from .assigners import AssignResult, BaseAssigner, MaxIoUAssigner
 from .bbox_target import bbox_target
-from .geometry import bbox_overlaps
+from .geometry import bbox_overlaps, bbox_areas
 from .samplers import (BaseSampler, CombinedSampler,
                        InstanceBalancedPosSampler, IoUBalancedNegSampler,
                        PseudoSampler, RandomSampler, SamplingResult)
@@ -12,7 +12,7 @@ from .assign_sampling import (  # isort:skip, avoid recursive imports
     assign_and_sample, build_assigner, build_sampler)
 
 __all__ = [
-    'bbox_overlaps', 'BaseAssigner', 'MaxIoUAssigner', 'AssignResult',
+    'bbox_overlaps', 'bbox_areas', 'BaseAssigner', 'MaxIoUAssigner', 'AssignResult',
     'BaseSampler', 'PseudoSampler', 'RandomSampler',
     'InstanceBalancedPosSampler', 'IoUBalancedNegSampler', 'CombinedSampler',
     'SamplingResult', 'build_assigner', 'build_sampler', 'assign_and_sample',

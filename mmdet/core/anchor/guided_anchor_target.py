@@ -17,10 +17,14 @@ def calc_region(bbox, ratio, featmap_size=None):
     Returns:
         tuple: x1, y1, x2, y2
     """
-    x1 = torch.round((1 - ratio) * bbox[0] + ratio * bbox[2]).long()
-    y1 = torch.round((1 - ratio) * bbox[1] + ratio * bbox[3]).long()
-    x2 = torch.round(ratio * bbox[0] + (1 - ratio) * bbox[2]).long()
-    y2 = torch.round(ratio * bbox[1] + (1 - ratio) * bbox[3]).long()
+    # x1 = torch.round((1 - ratio) * bbox[0] + ratio * bbox[2]).long()
+    # y1 = torch.round((1 - ratio) * bbox[1] + ratio * bbox[3]).long()
+    # x2 = torch.round(ratio * bbox[0] + (1 - ratio) * bbox[2]).long()
+    # y2 = torch.round(ratio * bbox[1] + (1 - ratio) * bbox[3]).long()
+    x1 = (1 - ratio) * bbox[0] + ratio * bbox[2]
+    y1 = (1 - ratio) * bbox[1] + ratio * bbox[3]
+    x2 = ratio * bbox[0] + (1 - ratio) * bbox[2]
+    y2 = ratio * bbox[1] + (1 - ratio) * bbox[3]
     if featmap_size is not None:
         x1 = x1.clamp(min=0, max=featmap_size[1] - 1)
         y1 = y1.clamp(min=0, max=featmap_size[0] - 1)

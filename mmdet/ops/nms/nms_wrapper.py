@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 
 from . import nms_cpu, nms_cuda
 from .soft_nms_cpu import soft_nms_cpu
@@ -76,3 +77,10 @@ def soft_nms(dets, iou_thr, method='linear', sigma=0.5, min_score=1e-3):
             inds, dtype=torch.long)
     else:
         return new_dets.astype(np.float32), inds.astype(np.int64)
+
+def simple_nms(heat, kernel=3, out_heat=None):
+    pad = (kernel - 1) // 2
+    hmax = nn.functional.max_pool2d(heat, (kernel, kernel), stride=1, padding=pad)
+    keep = (hmax == heat).float()
+    out_heat = heat if out_heat is None else out_heat
+    return out_heat * keep

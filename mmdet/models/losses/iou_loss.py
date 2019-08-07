@@ -68,6 +68,38 @@ def bounded_iou_loss(pred, target, beta=0.2, eps=1e-3):
                        loss_comb - 0.5 * beta)
     return loss
 
+def giou_loss(pred,
+              target,
+              weight,
+              avg_factor=None):
+    """GIoU loss.
+    Computing the GIoU loss between a set of predicted bboxes and target bboxes.
+    """
+    pos_mask = weight > 0
+    weight = weight[pos_mask].float()
+    if avg_factor is None:
+        avg_factor = torch.sum(pos_mask).float().item() + 1e-6
+    bboxes1 = pred[pos_mask].view(-1, 4)
+    bboxes2 = target[pos_mask].view(-1, 4)
+
+    lt = torch.max(bboxes1[:, :2], bboxes2[:, :2])  # [rows, 2]
+    rb = torch.min(bboxes1[:, 2:], bboxes2[:, 2:])  # [rows, 2]
+    wh = (rb - lt + 1).clamp(min=0)  # [rows, 2]
+    enclose_x1y1 = torch.min(bboxes1[:, :2], bboxes2[:, :2])
+    enclose_x2y2 = torch.max(bboxes1[:, 2:], bboxes2[:, 2:])
+    enclose_wh = (enclose_x2y2 - enclose_x1y1 + 1).clamp(min=0)
+
+    overlap = wh[:, 0] * wh[:, 1]
+    ap = (bboxes1[:, 2] - bboxes1[:, 0] + 1) * (bboxes1[:, 3] - bboxes1[:, 1] + 1)
+    ag = (bboxes2[:, 2] - bboxes2[:, 0] + 1) * (bboxes2[:, 3] - bboxes2[:, 1] + 1)
+    ious = overlap / (ap + ag - overlap)
+
+    enclose_area = enclose_wh[:, 0] * enclose_wh[:, 1]  # i.e. C in paper
+    u = ap + ag - overlap
+    gious = ious - (enclose_area - u) / enclose_area
+    iou_distances = 1 - gious
+    return torch.sum(iou_distances * weight)[None] / avg_factor
+
 
 @LOSSES.register_module
 class IoULoss(nn.Module):
