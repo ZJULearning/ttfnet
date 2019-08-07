@@ -1,31 +1,30 @@
 # model settings
 model = dict(
     type='TTFNet',
-    pretrained='./pretrain/darknet53.pth',
+    pretrained='modelzoo://resnet18',
     backbone=dict(
-        type='DarknetV3',
-        layers=[1, 2, 8, 8, 4],
-        inplanes=[3, 32, 64, 128, 256, 512],
-        planes=[32, 64, 128, 256, 512, 1024],
-        norm_cfg=dict(type='BN'),
-        out_indices=(1, 2, 3, 4),
+        type='ResNet',
+        depth=18,
+        num_stages=4,
+        out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_eval=False),
+        norm_eval=False,
+        style='pytorch'),
     neck=dict(type='None'),
     bbox_head=dict(
         type='TTFHead',
-        inplanes=(128, 256, 512, 1024),
+        inplanes=(64, 128, 256, 512),
         head_conv=128,
         wh_conv=64,
         hm_head_conv_num=2,
-        wh_head_conv_num=2,
+        wh_head_conv_num=1,
         num_classes=81,
         wh_offset_base=16,
         wh_agnostic=True,
-        wh_heatmap=True,
+        wh_gaussian=True,
         shortcut_cfg=(1, 2, 3),
         norm_cfg=dict(type='BN'),
-        hm_center_ratio=0.27,
+        alpha=0.54,
         giou_weight=5.,
         hm_weight=1.))
 cudnn_benchmark = True
@@ -42,7 +41,7 @@ data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 data = dict(
-    imgs_per_gpu=12,
+    imgs_per_gpu=16,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -98,19 +97,19 @@ bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
     sub_modules=['bbox_head'],
     save_every_n_steps=500)
+# yapf:disable
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
     ])
-# yapf:disable
 # yapf:enable
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = 'work_dirs/ttf_53d_1x_0807'
-load_from = None 
+work_dir = './work_dirs/eft18_htct027_whheatmap_v2l_2d5lr_wd4e4_s123_nos_1x'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
