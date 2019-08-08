@@ -111,7 +111,7 @@ total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/eft18_htct027_whheatmap_v2l_2d5lr_wd4e4_s123_nos_1x'
+work_dir = './work_dirs/0807_ttf_r18_1x'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]

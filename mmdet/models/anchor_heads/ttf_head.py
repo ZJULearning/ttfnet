@@ -6,16 +6,10 @@ import numpy as np
 
 from mmdet.ops import ModulatedDeformConvPack
 from mmdet.core import multi_apply, bbox_areas, force_fp32
-from mmdet.core.utils.common import gather_feat, tranpose_and_gather_feat
 from mmdet.core.anchor.guided_anchor_target import calc_region
 from mmdet.models.losses import ct_focal_loss, giou_loss
-from mmdet.models.utils import (
-    build_norm_layer, bias_init_with_prob,
-    ConvModule, ShortcutConv2d)
+from mmdet.models.utils import (build_norm_layer, bias_init_with_prob,ConvModule)
 from mmdet.ops.nms import simple_nms
-from mmdet.core.heatmap import draw_truncate_gaussian
-# simple_nms
-# , draw_truncate_gaussian
 from .anchor_head import AnchorHead
 from ..registry import HEADS
 
@@ -84,13 +78,13 @@ class TTFHead(AnchorHead):
         self.wh = self._make_conv_layer(wh_planes, wh_head_conv_num, wh_conv)
         self.hm = self._make_conv_layer(self.num_fg, hm_head_conv_num)
 
-        self._target_generator = CXTTargetGenerator(self.num_fg, wh_planes,
+        self._target_generator = TTFTargetGenerator(self.num_fg, wh_planes,
                                                     self.wh_offset_base,
                                                     wh_area_process, wh_heatmap, hm_center_ratio,
                                                     down_ratio=self.down_ratio,
                                                     center_ratio=center_ratio,
                                                     wh_agnostic=wh_agnostic)
-        self._loss = CXTLoss(giou_weight, hm_weight,
+        self._loss = TTFLoss(giou_weight, hm_weight,
                              wh_agnostic=wh_agnostic,
                              down_ratio=self.down_ratio)
 
@@ -225,7 +219,12 @@ class TTFHead(AnchorHead):
         xs = xs.view(batch, topk, 1) * self.down_ratio
         ys = ys.view(batch, topk, 1) * self.down_ratio
 
-        wh = tranpose_and_gather_feat(wh, inds)  # (batch, topk, 4) or (batch, topk, 80 * 4)
+        wh = wh.permute(0, 2, 3, 1).contiguous()
+        wh = wh.view(wh.size(0), -1, wh.size(3))
+        inds = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), wh.size(2))
+        wh = wh.gather(1, inds)
+        # wh = tranpose_and_gather_feat(wh, inds)  # (batch, topk, 4) or (batch, topk, 80 * 4)
+
         if not self.wh_agnostic:
             wh = wh.view(-1, topk, self.num_fg, 4)
             wh = torch.gather(wh, 2, clses[..., None, None].expand(
@@ -286,14 +285,16 @@ class TTFHead(AnchorHead):
         # both are (batch, topk). select topk from 80*topk
         topk_score, topk_ind = torch.topk(topk_scores.view(batch, -1), topk)
         topk_clses = (topk_ind / topk).int()
-        topk_inds = gather_feat(topk_inds.view(batch, -1, 1), topk_ind).view(batch, topk)
-        topk_ys = gather_feat(topk_ys.view(batch, -1, 1), topk_ind).view(batch, topk)
-        topk_xs = gather_feat(topk_xs.view(batch, -1, 1), topk_ind).view(batch, topk)
+        topk_ind = topk_ind.unsqueeze(2).expand(topk_ind.size(0),
+                topk_ind.size(1), 1)
+        topk_inds = topk_inds.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
+        topk_ys = topk_ys.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
+        topk_xs = topk_xs.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
 
         return topk_score, topk_inds, topk_clses, topk_ys, topk_xs
 
 
-class CXTTargetGenerator(object):
+class TTFTargetGenerator(object):
 
     def __init__(self,
                  num_fg,
@@ -316,6 +317,34 @@ class CXTTargetGenerator(object):
         self.max_objs = max_objs
         self.center_ratio = center_ratio
         self.wh_agnostic = wh_agnostic
+
+    def gaussian_2d(self, shape, sigma_x=1, sigma_y=1):
+        m, n = [(ss - 1.) / 2. for ss in shape]
+        y, x = np.ogrid[-m:m + 1, -n:n + 1]
+    
+        h = np.exp(-(x * x / (2 * sigma_x * sigma_x) + y * y / (2 * sigma_y * sigma_y)))
+        h[h < np.finfo(h.dtype).eps * h.max()] = 0
+        return h
+    
+    def draw_truncate_gaussian(self, heatmap, center, h_radius, w_radius, k=1):
+        h, w = 2 * h_radius + 1, 2 * w_radius + 1
+        sigma_x = w / 6
+        sigma_y = h / 6
+        gaussian = self.gaussian_2d((h, w), sigma_x=sigma_x, sigma_y=sigma_y)
+        gaussian = heatmap.new_tensor(gaussian)
+    
+        x, y = int(center[0]), int(center[1])
+    
+        height, width = heatmap.shape[0:2]
+    
+        left, right = min(x, w_radius), min(width - x, w_radius + 1)
+        top, bottom = min(y, h_radius), min(height - y, h_radius + 1)
+    
+        masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
+        masked_gaussian = gaussian[h_radius - top:h_radius + bottom, w_radius - left:w_radius + right]
+        if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0:
+            torch.max(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
+        return heatmap
 
 
 
@@ -367,8 +396,8 @@ class CXTTargetGenerator(object):
                                 (gt_boxes[:, 1] + gt_boxes[:, 3]) / 2],
                                dim=1) / self.down_ratio).to(torch.int)
 
-        h_radiuses = (feat_hs / 2 * self.hm_center_ratio).int()
-        w_radiuses = (feat_ws / 2 * self.hm_center_ratio).int()
+        h_radiuses = (feat_hs * self.hm_center_ratio).int()
+        w_radiuses = (feat_ws * self.hm_center_ratio).int()
 
         # calculate positive (center) regions
         ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = calc_region(gt_boxes.transpose(0, 1), r1
@@ -385,7 +414,7 @@ class CXTTargetGenerator(object):
             ctr_x1, ctr_y1, ctr_x2, ctr_y2 = ctr_x1s[k], ctr_y1s[k], ctr_x2s[k], ctr_y2s[k]
 
             fake_heatmap = fake_heatmap.zero_()
-            draw_truncate_gaussian(fake_heatmap, ct_ints[k],
+            self.draw_truncate_gaussian(fake_heatmap, ct_ints[k],
                                    h_radiuses[k].item(), w_radiuses[k].item())
             heatmap[cls_id] = torch.max(heatmap[cls_id], fake_heatmap)
 
@@ -438,19 +467,18 @@ class CXTTargetGenerator(object):
             return heatmap, box_target, wh_weight
 
 
-class CXTLoss(object):
+class TTFLoss(object):
 
     def __init__(self,
                  giou_weight=1.,
                  hm_weight=1.,
                  wh_agnostic=False,
                  down_ratio=4):
-        super(CXTLoss, self).__init__()
+        super(TTFLoss, self).__init__()
         self.giou_weight = giou_weight
         self.hm_weight = hm_weight
         self.wh_agnostic = wh_agnostic
         self.down_ratio = down_ratio
-
         self.base_loc = None
 
 
@@ -496,3 +524,37 @@ class CXTLoss(object):
         wh_loss = giou_loss(pred_boxes, boxes, mask, avg_factor=avg_factor) * self.giou_weight
 
         return hm_loss, wh_loss
+
+class ShortcutConv2d(nn.Module):
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_sizes,
+                 paddings,
+                 activation_last=False,
+                 use_prelu=False,
+                 shortcut_in_shortcut=False):
+        super(ShortcutConv2d, self).__init__()
+        assert len(kernel_sizes) == len(paddings)
+        self.shortcut_in_shortcut = shortcut_in_shortcut
+
+        layers = []
+        for i, (kernel_size, padding) in enumerate(zip(kernel_sizes, paddings)):
+            inc = in_channels if i == 0 else out_channels
+            layers.append(nn.Conv2d(inc, out_channels, kernel_size, padding=padding))
+            if i < len(kernel_sizes) - 1 or activation_last:
+                if use_prelu:
+                    layers.append(nn.PReLU(out_channels))
+                else:
+                    layers.append(nn.ReLU(inplace=True))
+
+        self.layers = nn.Sequential(*layers)
+        self.shortcut = nn.Conv2d(in_channels, out_channels, 3, padding=1)
+
+    def forward(self, x):
+        y = self.layers(x)
+        if self.shortcut_in_shortcut:
+            shortcut = self.shortcut(x)
+            y = shortcut + y
+        return y
