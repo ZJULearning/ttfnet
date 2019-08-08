@@ -23,17 +23,27 @@ The inference command line on coco minival split:
 
 We provide the following converged models.
 
-| Model            | Training Hours | FPS   | AP(minival) | Link |
-| ---------------- | -------------- | ----- | ----------- | ---- |
-| TTFNet-18 (fast) | 2.1            | 110.7 | 25.9        | -    |
-| TTFNet-18        | 4.1            | 112.3 | 27.9        | -    |
-| TTFNet-34        | 4.8            | 86.6  | 31.3        | -    |
-| TTFNet-53 (fast) | 3.4            | 54.8  | 32.9        | -    |
-| TTFNet-53        | 6.8            | 54.4  | 35.1        | -    |
+| Model            | Training Hours | FPS   | AP(minival) | Link                                                         |
+| ---------------- | -------------- | ----- | ----------- | ------------------------------------------------------------ |
+| TTFNet-18 (fast) | 2.1            | 110.7 | 25.9        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaCB-TKnqURNoyl_P-uxClABsSz35Nmu-L1T3SObBnHYMw?e=HxGXPE) |
+| TTFNet-18        | 4.1            | 112.3 | 28.1        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Ef2CVhUYfOJDjzrlQfZGWxwBvUqnXu3mJ0pweiSEuPNYag?e=iJwPPv) |
+| TTFNet-34        | 4.8            | 86.6  | 31.3        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Eb0Ab71mpsFBvBP2_GsJ4tUBRGM8NvAym9qZxPqJGtyWSA?e=6Y7BU7) |
+| TTFNet-53 (fast) | 3.4            | 54.8  | 32.9        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EZVE_d6oR_VGrDD4IZS2ppIB0lm2V8UaBkgFUjuEM7oRZA?e=XVLRwx) |
+| TTFNet-53        | 6.8            | 54.4  | 35.1        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Ed1Qxlom3FpGmNZI9dnHau8BtXF0rPeHSYGn6HkoXOEB3A?e=NfPjrZ) |
+
+We also provide the pretrained [Darknet53](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaXXohf5LgBNji6bkxrARN4BZ9N4sEedaINPeqexu5l2jA?e=nJhe8L) here.
 
 ## Training
 
-The following command line will train TTFNet-53 on 8 GPUs for 24 epochs:
+The following commands will train TTFNet-18 on 8 GPUs for 24 epochs and TTFNet-53 on 8 GPUs for 12 epochs:
+
+```
+./scripts/dist_train.sh configs/ttfnet/ttfnet_r18_2x.py 8
+```
+
+```
+./scripts/dist_train.sh configs/ttfnet/ttfnet_d53_1x.py 8
+```
 
 
 

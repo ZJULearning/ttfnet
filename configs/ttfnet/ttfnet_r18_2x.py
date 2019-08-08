@@ -81,7 +81,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=0.0004,
+optimizer = dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0004,
                  paramwise_options=dict(bias_lr_mult=2., bias_decay_mult=0.))
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
@@ -90,8 +90,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
-    step=[9, 11])
-# checkpoint_config = dict(save_every_n_steps=500, max_to_keep=1, keep_every_n_epochs=9)
+    step=[8, 22])
 checkpoint_config = dict(interval=1)
 bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
@@ -105,11 +104,11 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 12
+total_epochs = 24
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/eft18_htct027_whheatmap_v2l_2d5lr_wd4e4_s123_nos_1x'
+work_dir = './work_dirs/ttfnet18_2x'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
