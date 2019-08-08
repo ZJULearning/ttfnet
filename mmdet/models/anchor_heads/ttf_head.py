@@ -22,52 +22,56 @@ class TTFHead(AnchorHead):
                  planes=(256, 128, 64),
                  base_down_ratio=32,
                  head_conv=256,
-                 wh_conv=32,
-                 hm_head_conv_num=1,
-                 wh_head_conv_num=1,
+                 wh_conv=64,
+                 hm_head_conv_num=2,
+                 wh_head_conv_num=2,
                  num_classes=81,
                  shortcut_kernel=3,
                  conv_cfg=None,
                  norm_cfg=dict(type='BN'),
                  shortcut_cfg=(1, 2, 3),
-                 wh_offset_base=1.,
+                 wh_offset_base=16.,
                  wh_area_process='log',
-                 wh_agnostic=False,
-                 wh_heatmap=False,
-                 hm_center_ratio=0.27,
-                 center_ratio=0.2,
-                 giou_weight=1.,
-                 hm_weight=1.,):
+                 wh_agnostic=True,
+                 wh_gaussian=True,
+                 alpha=0.54,
+                 beta=0.54,
+                 giou_weight=5.,
+                 hm_weight=1.,
+                 max_objs=128):
         super(AnchorHead, self).__init__()
-        assert len(planes) in [2, 3, 4] and \
-               len(planes) == len(shortcut_cfg)
+        assert len(planes) in [2, 3, 4] and len(planes) == len(shortcut_cfg)
         assert wh_area_process in [None, 'norm', 'log', 'sqrt']
-        self.down_ratio = base_down_ratio // 2 ** len(planes)
+        assert not wh_gaussian or (alpha == beta)
+
         self.planes = planes
         self.head_conv = head_conv
         self.num_classes = num_classes
-        self.num_fg = num_classes - 1
-
-        wh_planes = 4 * self.num_fg
-        if wh_agnostic:
-            wh_planes = 4
-        self.wh_agnostic = wh_agnostic
-
         self.conv_cfg = conv_cfg
-
         self.wh_offset_base = wh_offset_base
-
+        self.wh_area_process = wh_area_process
+        self.wh_agnostic = wh_agnostic
+        self.wh_gaussian = wh_gaussian
+        self.alpha = alpha
+        self.beta = beta
+        self.giou_weight = giou_weight
         self.hm_weight = hm_weight
+        self.max_objs = max_objs
         self.fp16_enabled = False
+
+        self.down_ratio = base_down_ratio // 2 ** len(planes)
+        self.num_fg = num_classes - 1
+        self.wh_planes = 4 if wh_agnostic else 4 * self.num_fg
+        self.base_loc = None
 
         # repeat deconv n times. 32x to 4x by default.
         self.deconv_layers = nn.ModuleList([
-            self._make_deconv_layer(inplanes[-1], 1, [planes[0]], [4], norm_cfg=norm_cfg),
-            self._make_deconv_layer(planes[0], 1, [planes[1]], [4], norm_cfg=norm_cfg)
+            self._make_deconv_layer(inplanes[-1], planes[0], norm_cfg=norm_cfg),
+            self._make_deconv_layer(planes[0], planes[1], norm_cfg=norm_cfg)
         ])
         for i in range(2, len(planes)):
             self.deconv_layers.append(
-                self._make_deconv_layer(planes[i - 1], 1, [planes[i]], [4], norm_cfg=norm_cfg))
+                self._make_deconv_layer(planes[i - 1], planes[i], norm_cfg=norm_cfg))
 
         padding = (shortcut_kernel - 1) // 2
         self.shortcut_layers = self._make_shortcut(
@@ -75,18 +79,8 @@ class TTFHead(AnchorHead):
             kernel_size=shortcut_kernel, padding=padding)
 
         # heads
-        self.wh = self._make_conv_layer(wh_planes, wh_head_conv_num, wh_conv)
+        self.wh = self._make_conv_layer(self.wh_planes, wh_head_conv_num, wh_conv)
         self.hm = self._make_conv_layer(self.num_fg, hm_head_conv_num)
-
-        self._target_generator = TTFTargetGenerator(self.num_fg, wh_planes,
-                                                    self.wh_offset_base,
-                                                    wh_area_process, wh_heatmap, hm_center_ratio,
-                                                    down_ratio=self.down_ratio,
-                                                    center_ratio=center_ratio,
-                                                    wh_agnostic=wh_agnostic)
-        self._loss = TTFLoss(giou_weight, hm_weight,
-                             wh_agnostic=wh_agnostic,
-                             down_ratio=self.down_ratio)
 
     def _make_shortcut(self,
                        inplanes,
@@ -105,39 +99,17 @@ class TTFHead(AnchorHead):
             shortcut_layers.append(layer)
         return shortcut_layers
 
-    def _make_deconv_layer(self, inplanes, num_layers, num_filters, num_kernels, norm_cfg=None):
-        """
-
-        Args:
-            inplanes: in-channel num.
-            num_layers: deconv layer num.
-            num_filters: out channel of the deconv layers.
-            num_kernels: int
-            norm_cfg: dict()
-
-        Returns:
-            stacked deconv layers.
-        """
-        assert num_layers == len(num_filters), \
-            'ERROR: num_deconv_layers is different len(num_deconv_filters)'
-        assert num_layers == len(num_kernels), \
-            'ERROR: num_deconv_layers is different len(num_deconv_filters)'
+    def _make_deconv_layer(self, inplanes, planes, norm_cfg=None):
+        mdcn = ModulatedDeformConvPack(inplanes, planes, 3, stride=1,
+                                       padding=1, dilation=1, deformable_groups=1)
+        up = nn.UpsamplingBilinear2d(scale_factor=2)
 
         layers = []
-        for i in range(num_layers):
-            planes = num_filters[i]
-            inplanes = inplanes if i == 0 else num_filters[i - 1]
-
-            mdcn = ModulatedDeformConvPack(inplanes, planes, 3, stride=1,
-                                           padding=1, dilation=1, deformable_groups=1)
-            up = nn.UpsamplingBilinear2d(scale_factor=2)
-
-            layers.append(mdcn)
-            if norm_cfg:
-                layers.append(build_norm_layer(norm_cfg, planes)[1])
-            layers.append(nn.ReLU(inplace=True))
-
-            layers.append(up)
+        layers.append(mdcn)
+        if norm_cfg:
+            layers.append(build_norm_layer(norm_cfg, planes)[1])
+        layers.append(nn.ReLU(inplace=True))
+        layers.append(up)
 
         return nn.Sequential(*layers)
 
@@ -173,10 +145,6 @@ class TTFHead(AnchorHead):
             if isinstance(m, nn.Conv2d):
                 normal_init(m, std=0.001)
 
-        for _, m in self.wh.named_modules():
-            if isinstance(m, nn.Conv2d):
-                normal_init(m, std=0.01)
-
     def forward(self, feats):
         """
 
@@ -185,7 +153,7 @@ class TTFHead(AnchorHead):
 
         Returns:
             hm: tensor, (batch, 80, h, w).
-            wh: tensor, (batch, 2, h, w).
+            wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
         for i, (deconv_layer, shortcut_layer) in enumerate(
@@ -234,10 +202,8 @@ class TTFHead(AnchorHead):
         clses = clses.view(batch, topk, 1).float()
         scores = scores.view(batch, topk, 1)
 
-        bboxes = torch.cat([xs - wh[..., [0]],
-                            ys - wh[..., [1]],
-                            xs + wh[..., [2]],
-                            ys + wh[..., [3]]], dim=2)
+        bboxes = torch.cat([xs - wh[..., [0]], ys - wh[..., [1]],
+                            xs + wh[..., [2]], ys + wh[..., [3]]], dim=2)
 
         result_list = []
         for idx in range(bboxes.shape[0]):
@@ -267,10 +233,9 @@ class TTFHead(AnchorHead):
              img_metas,
              cfg,
              gt_bboxes_ignore=None):
-        all_targets = self._target_generator(gt_bboxes, gt_labels, img_metas)
-        hm_loss, wh_loss = self._loss(
-            pred_heatmap, pred_wh, *all_targets)
-        return {'losses/eftnet_loss_heatmap': hm_loss, 'losses/eftnet_loss_wh': wh_loss}
+        all_targets = self.target_generator(gt_bboxes, gt_labels, img_metas)
+        hm_loss, wh_loss = self.loss_calc(pred_heatmap, pred_wh, *all_targets)
+        return {'losses/ttfnet_loss_heatmap': hm_loss, 'losses/ttfnet_loss_wh': wh_loss}
 
     def _topk(self, scores, topk):
         batch, cat, height, width = scores.size()
@@ -292,31 +257,6 @@ class TTFHead(AnchorHead):
         topk_xs = topk_xs.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
 
         return topk_score, topk_inds, topk_clses, topk_ys, topk_xs
-
-
-class TTFTargetGenerator(object):
-
-    def __init__(self,
-                 num_fg,
-                 wh_planes,
-                 wh_offset_base,
-                 wh_area_process,
-                 wh_heatmap,
-                 hm_center_ratio,
-                 down_ratio=4,
-                 max_objs=128,
-                 center_ratio=0.2,
-                 wh_agnostic=False):
-        self.num_fg = num_fg
-        self.wh_planes = wh_planes
-        self.wh_offset_base = wh_offset_base
-        self.wh_area_process = wh_area_process
-        self.wh_heatmap = wh_heatmap
-        self.hm_center_ratio = hm_center_ratio
-        self.down_ratio = down_ratio
-        self.max_objs = max_objs
-        self.center_ratio = center_ratio
-        self.wh_agnostic = wh_agnostic
 
     def gaussian_2d(self, shape, sigma_x=1, sigma_y=1):
         m, n = [(ss - 1.) / 2. for ss in shape]
@@ -346,8 +286,6 @@ class TTFTargetGenerator(object):
             torch.max(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
         return heatmap
 
-
-
     def target_single_image(self, gt_boxes, gt_labels, feat_shape):
         """
 
@@ -359,6 +297,7 @@ class TTFTargetGenerator(object):
         Returns:
             heatmap: tensor, tensor <=> img, (80, h, w).
             box_target: tensor, tensor <=> img, (4, h, w) or (80 * 4, h, w).
+            reg_weight: tensor, same as box_target
         """
         output_h, output_w = feat_shape
         heatmap_channel = self.num_fg
@@ -366,7 +305,7 @@ class TTFTargetGenerator(object):
         heatmap = gt_boxes.new_zeros((heatmap_channel, output_h, output_w))
         fake_heatmap = gt_boxes.new_zeros((output_h, output_w))
         box_target = gt_boxes.new_ones((self.wh_planes, output_h, output_w)) * -1
-        wh_weight = gt_boxes.new_zeros((self.wh_planes // 4, output_h, output_w))
+        reg_weight = gt_boxes.new_zeros((self.wh_planes // 4, output_h, output_w))
 
         if self.wh_area_process == 'log':
             boxes_areas_log = bbox_areas(gt_boxes).log()
@@ -388,39 +327,39 @@ class TTFTargetGenerator(object):
         feat_hs, feat_ws = (feat_gt_boxes[:, 3] - feat_gt_boxes[:, 1],
                             feat_gt_boxes[:, 2] - feat_gt_boxes[:, 0])
 
-        r1 = (1 - self.center_ratio) / 2
-
         # we calc the center and ignore area based on the gt-boxes of the origin scale
         # no peak will fall between pixels
         ct_ints = (torch.stack([(gt_boxes[:, 0] + gt_boxes[:, 2]) / 2,
                                 (gt_boxes[:, 1] + gt_boxes[:, 3]) / 2],
                                dim=1) / self.down_ratio).to(torch.int)
 
-        h_radiuses = (feat_hs * self.hm_center_ratio).int()
-        w_radiuses = (feat_ws * self.hm_center_ratio).int()
+        h_radiuses = (feat_hs * self.alpha).int()
+        w_radiuses = (feat_ws * self.alpha).int()
 
-        # calculate positive (center) regions
-        ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = calc_region(gt_boxes.transpose(0, 1), r1
-                                                         #use_round=False
-                                                         )
-        ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = [torch.round(x / self.down_ratio).int()
-                                              for x in [ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s] ]
-        ctr_x1s, ctr_x2s = [torch.clamp(x, max=output_w - 1) for x in [ctr_x1s, ctr_x2s]]
-        ctr_y1s, ctr_y2s = [torch.clamp(y, max=output_h - 1) for y in [ctr_y1s, ctr_y2s]]
+        if not self.wh_gaussian:
+            # calculate positive (center) regions
+            r1 = (1 - self.beta) / 2
+            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = calc_region(gt_boxes.transpose(0, 1), r1
+                                                             # use_round=False
+                                                             )
+            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = [torch.round(x / self.down_ratio).int()
+                                                  for x in [ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s]]
+            ctr_x1s, ctr_x2s = [torch.clamp(x, max=output_w - 1) for x in [ctr_x1s, ctr_x2s]]
+            ctr_y1s, ctr_y2s = [torch.clamp(y, max=output_h - 1) for y in [ctr_y1s, ctr_y2s]]
 
         # larger boxes have lower priority than small boxes.
         for k in range(boxes_ind.shape[0]):
             cls_id = gt_labels[k] - 1
-            ctr_x1, ctr_y1, ctr_x2, ctr_y2 = ctr_x1s[k], ctr_y1s[k], ctr_x2s[k], ctr_y2s[k]
 
             fake_heatmap = fake_heatmap.zero_()
             self.draw_truncate_gaussian(fake_heatmap, ct_ints[k],
                                    h_radiuses[k].item(), w_radiuses[k].item())
             heatmap[cls_id] = torch.max(heatmap[cls_id], fake_heatmap)
 
-            if self.wh_heatmap:
+            if self.wh_gaussian:
                 box_target_inds = fake_heatmap > 0
             else:
+                ctr_x1, ctr_y1, ctr_x2, ctr_y2 = ctr_x1s[k], ctr_y1s[k], ctr_x2s[k], ctr_y2s[k]
                 box_target_inds = torch.zeros_like(fake_heatmap, dtype=torch.uint8)
                 box_target_inds[ctr_y1:ctr_y2 + 1, ctr_x1:ctr_x2 + 1] = 1
 
@@ -435,11 +374,11 @@ class TTFTargetGenerator(object):
 
             if self.wh_agnostic:
                 cls_id = 0
-            wh_weight[cls_id, box_target_inds] = local_heatmap / ct_div
+            reg_weight[cls_id, box_target_inds] = local_heatmap / ct_div
 
-        return heatmap, box_target, wh_weight
+        return heatmap, box_target, reg_weight
 
-    def __call__(self, gt_boxes, gt_labels, img_metas):
+    def target_generator(self, gt_boxes, gt_labels, img_metas):
         """
 
         Args:
@@ -450,11 +389,12 @@ class TTFTargetGenerator(object):
         Returns:
             heatmap: tensor, (batch, 80, h, w).
             box_target: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
+            reg_weight: tensor, same as box_target.
         """
         with torch.no_grad():
             feat_shape = (img_metas[0]['pad_shape'][0] // self.down_ratio,
                           img_metas[0]['pad_shape'][1] // self.down_ratio)
-            heatmap, box_target, wh_weight = multi_apply(
+            heatmap, box_target, reg_weight = multi_apply(
                 self.target_single_image,
                 gt_boxes,
                 gt_labels,
@@ -462,43 +402,28 @@ class TTFTargetGenerator(object):
             )
 
             heatmap, box_target = [torch.stack(t, dim=0).detach() for t in [heatmap, box_target]]
-            wh_weight = torch.stack(wh_weight, dim=0).detach()
+            reg_weight = torch.stack(reg_weight, dim=0).detach()
 
-            return heatmap, box_target, wh_weight
+            return heatmap, box_target, reg_weight
 
-
-class TTFLoss(object):
-
-    def __init__(self,
-                 giou_weight=1.,
-                 hm_weight=1.,
-                 wh_agnostic=False,
-                 down_ratio=4):
-        super(TTFLoss, self).__init__()
-        self.giou_weight = giou_weight
-        self.hm_weight = hm_weight
-        self.wh_agnostic = wh_agnostic
-        self.down_ratio = down_ratio
-        self.base_loc = None
-
-
-    def __call__(self,
-                 pred_hm,
-                 pred_wh,
-                 heatmap,
-                 box_target,
-                 wh_weight):
+    def loss_calc(self,
+                  pred_hm,
+                  pred_wh,
+                  heatmap,
+                  box_target,
+                  wh_weight):
         """
 
         Args:
             pred_hm: tensor, (batch, 80, h, w).
             pred_wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
-            heatmap: tensor, (batch, 80, h, w).
-            box_target: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
-            wh_weight: tensor or None, (batch, 80, h, w).
+            heatmap: tensor, same as pred_hm.
+            box_target: tensor, same as pred_wh.
+            wh_weight: tensor, same as pred_wh.
 
         Returns:
-
+            hm_loss
+            wh_loss
         """
         H, W = pred_hm.shape[2:]
         pred_hm = torch.clamp(pred_hm.sigmoid_(), min=1e-4, max=1 - 1e-4)

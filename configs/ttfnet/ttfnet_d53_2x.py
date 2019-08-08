@@ -22,10 +22,10 @@ model = dict(
         num_classes=81,
         wh_offset_base=16,
         wh_agnostic=True,
-        wh_heatmap=True,
+        wh_gaussian=True,
         shortcut_cfg=(1, 2, 3),
         norm_cfg=dict(type='BN'),
-        hm_center_ratio=0.27,
+        alpha=0.54,
         giou_weight=5.,
         hm_weight=1.))
 cudnn_benchmark = True
@@ -91,26 +91,25 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
-    step=[9, 11])
-# checkpoint_config = dict(save_every_n_steps=500, max_to_keep=1, keep_every_n_epochs=9)
+    step=[8, 22])
 checkpoint_config = dict(interval=1)
 bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
     sub_modules=['bbox_head'],
     save_every_n_steps=500)
+# yapf:disable
 log_config = dict(
     interval=50,
     hooks=[
         dict(type='TextLoggerHook'),
     ])
-# yapf:disable
 # yapf:enable
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = 'work_dirs/0807_ttf_53d_1x'
-load_from = None 
+work_dir = 'work_dirs/ttfnet53_2x'
+load_from = None
 resume_from = None
 workflow = [('train', 1)]
