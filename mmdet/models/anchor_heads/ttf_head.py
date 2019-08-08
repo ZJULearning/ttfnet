@@ -72,12 +72,12 @@ class TTFHead(AnchorHead):
 
         # repeat deconv n times. 32x to 4x by default.
         self.deconv_layers = nn.ModuleList([
-            self._make_deconv_layer(inplanes[-1], 1, [planes[0]], [4], norm_cfg=norm_cfg),
-            self._make_deconv_layer(planes[0], 1, [planes[1]], [4], norm_cfg=norm_cfg)
+            self._make_deconv_layer(inplanes[-1], planes[0], norm_cfg=norm_cfg),
+            self._make_deconv_layer(planes[0], planes[1], norm_cfg=norm_cfg)
         ])
         for i in range(2, len(planes)):
             self.deconv_layers.append(
-                self._make_deconv_layer(planes[i - 1], 1, [planes[i]], [4], norm_cfg=norm_cfg))
+                self._make_deconv_layer(planes[i - 1], planes[i], norm_cfg=norm_cfg))
 
         padding = (shortcut_kernel - 1) // 2
         self.shortcut_layers = self._make_shortcut(
@@ -105,35 +105,17 @@ class TTFHead(AnchorHead):
             shortcut_layers.append(layer)
         return shortcut_layers
 
-    def _make_deconv_layer(self, inplanes, num_layers, num_filters, num_kernels, norm_cfg=None):
-        """
-
-        Args:
-            inplanes: in-channel num.
-            num_layers: deconv layer num.
-            num_filters: out channel of the deconv layers.
-            num_kernels: int
-            norm_cfg: dict()
-
-        Returns:
-            stacked deconv layers.
-        """
-        assert num_layers == len(num_filters) == len(num_kernels)
+    def _make_deconv_layer(self, inplanes, planes, norm_cfg=None):
+        mdcn = ModulatedDeformConvPack(inplanes, planes, 3, stride=1,
+                                       padding=1, dilation=1, deformable_groups=1)
+        up = nn.UpsamplingBilinear2d(scale_factor=2)
 
         layers = []
-        for i in range(num_layers):
-            planes = num_filters[i]
-            inplanes = inplanes if i == 0 else num_filters[i - 1]
-
-            mdcn = ModulatedDeformConvPack(inplanes, planes, 3, stride=1,
-                                           padding=1, dilation=1, deformable_groups=1)
-            up = nn.UpsamplingBilinear2d(scale_factor=2)
-
-            layers.append(mdcn)
-            if norm_cfg:
-                layers.append(build_norm_layer(norm_cfg, planes)[1])
-            layers.append(nn.ReLU(inplace=True))
-            layers.append(up)
+        layers.append(mdcn)
+        if norm_cfg:
+            layers.append(build_norm_layer(norm_cfg, planes)[1])
+        layers.append(nn.ReLU(inplace=True))
+        layers.append(up)
 
         return nn.Sequential(*layers)
 
@@ -168,10 +150,6 @@ class TTFHead(AnchorHead):
         for _, m in self.wh.named_modules():
             if isinstance(m, nn.Conv2d):
                 normal_init(m, std=0.001)
-
-        for _, m in self.wh.named_modules():
-            if isinstance(m, nn.Conv2d):
-                normal_init(m, std=0.01)
 
     def forward(self, feats):
         """
