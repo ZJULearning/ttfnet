@@ -11,7 +11,7 @@ model = dict(
         out_indices=(1, 2, 3, 4),
         frozen_stages=1,
         norm_eval=False),
-    neck=dict(type='None'),
+    neck=None,
     bbox_head=dict(
         type='TTFHead',
         inplanes=(128, 256, 512, 1024),
@@ -92,7 +92,7 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
     step=[9, 11])
-checkpoint_config = dict(interval=1)
+checkpoint_config = dict(interval=4)
 bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
     sub_modules=['bbox_head'],
@@ -102,18 +102,13 @@ log_config = dict(
     hooks=[
         dict(type='TextLoggerHook'),
     ])
-# yapf:disable
 # yapf:enable
 # runtime settings
 total_epochs = 12
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-<<<<<<< HEAD:configs/ttf_net/ttf_d53_1x.py
-work_dir = 'work_dirs/0807_ttf_53d_1x'
-=======
 work_dir = 'work_dirs/ttfnet53_1x'
->>>>>>> d1ad759ef9eb5ee243018b2904ffed009357a803:configs/ttfnet/ttfnet_d53_1x.py
 load_from = None 
 resume_from = None
 workflow = [('train', 1)]

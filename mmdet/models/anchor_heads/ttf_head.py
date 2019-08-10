@@ -191,7 +191,6 @@ class TTFHead(AnchorHead):
         wh = wh.view(wh.size(0), -1, wh.size(3))
         inds = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), wh.size(2))
         wh = wh.gather(1, inds)
-        # wh = tranpose_and_gather_feat(wh, inds)  # (batch, topk, 4) or (batch, topk, 80 * 4)
 
         if not self.wh_agnostic:
             wh = wh.view(-1, topk, self.num_fg, 4)
@@ -250,8 +249,7 @@ class TTFHead(AnchorHead):
         # both are (batch, topk). select topk from 80*topk
         topk_score, topk_ind = torch.topk(topk_scores.view(batch, -1), topk)
         topk_clses = (topk_ind / topk).int()
-        topk_ind = topk_ind.unsqueeze(2).expand(topk_ind.size(0),
-                topk_ind.size(1), 1)
+        topk_ind = topk_ind.unsqueeze(2)
         topk_inds = topk_inds.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
         topk_ys = topk_ys.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
         topk_xs = topk_xs.view(batch, -1, 1).gather(1, topk_ind).view(batch, topk)
@@ -333,16 +331,14 @@ class TTFHead(AnchorHead):
                                 (gt_boxes[:, 1] + gt_boxes[:, 3]) / 2],
                                dim=1) / self.down_ratio).to(torch.int)
 
-        h_radiuses = (feat_hs * self.alpha).int()
-        w_radiuses = (feat_ws * self.alpha).int()
+        h_radiuses = (feat_hs / 2. * self.alpha).int()
+        w_radiuses = (feat_ws / 2. * self.alpha).int()
 
         if not self.wh_gaussian:
             # calculate positive (center) regions
             r1 = (1 - self.beta) / 2
-            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = calc_region(gt_boxes.transpose(0, 1), r1
-                                                             # use_round=False
-                                                             )
-            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = [torch.round(x / self.down_ratio).int()
+            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = calc_region(gt_boxes.transpose(0, 1), r1)
+            ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s = [torch.round(x.float() / self.down_ratio).int()
                                                   for x in [ctr_x1s, ctr_y1s, ctr_x2s, ctr_y2s]]
             ctr_x1s, ctr_x2s = [torch.clamp(x, max=output_w - 1) for x in [ctr_x1s, ctr_x2s]]
             ctr_y1s, ctr_y2s = [torch.clamp(y, max=output_h - 1) for y in [ctr_y1s, ctr_y2s]]

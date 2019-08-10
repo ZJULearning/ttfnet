@@ -11,7 +11,7 @@ model = dict(
         out_indices=(1, 2, 3, 4),
         frozen_stages=1,
         norm_eval=False),
-    neck=dict(type='None'),
+    neck=None,
     bbox_head=dict(
         type='TTFHead',
         inplanes=(128, 256, 512, 1024),
@@ -91,13 +91,12 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
-    step=[8, 22])
-checkpoint_config = dict(interval=1)
+    step=[18, 22])
+checkpoint_config = dict(interval=4)
 bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
     sub_modules=['bbox_head'],
     save_every_n_steps=500)
-# yapf:disable
 log_config = dict(
     interval=50,
     hooks=[
@@ -105,7 +104,7 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 12
+total_epochs = 24
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'

@@ -7,8 +7,8 @@ class TTFNet(SingleStageDetector):
 
     def __init__(self,
                  backbone,
-                 neck,
-                 bbox_head,
+                 neck=None,
+                 bbox_head=None,
                  train_cfg=None,
                  test_cfg=None,
                  pretrained=None):
