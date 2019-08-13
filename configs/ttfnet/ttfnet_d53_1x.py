@@ -26,8 +26,8 @@ model = dict(
         shortcut_cfg=(1, 2, 3),
         norm_cfg=dict(type='BN'),
         alpha=0.54,
-        giou_weight=5.,
-        hm_weight=1.))
+        hm_weight=1.,
+        wh_weight=5.))
 cudnn_benchmark = True
 # training and testing settings
 train_cfg = dict(

@@ -8,7 +8,7 @@ from mmdet.ops import ModulatedDeformConvPack
 from mmdet.core import multi_apply, bbox_areas, force_fp32
 from mmdet.core.anchor.guided_anchor_target import calc_region
 from mmdet.models.losses import ct_focal_loss, giou_loss
-from mmdet.models.utils import (build_norm_layer, bias_init_with_prob,ConvModule)
+from mmdet.models.utils import (build_norm_layer, bias_init_with_prob, ConvModule)
 from mmdet.ops.nms import simple_nms
 from .anchor_head import AnchorHead
 from ..registry import HEADS
@@ -36,8 +36,8 @@ class TTFHead(AnchorHead):
                  wh_gaussian=True,
                  alpha=0.54,
                  beta=0.54,
-                 giou_weight=5.,
                  hm_weight=1.,
+                 wh_weight=5.,
                  max_objs=128):
         super(AnchorHead, self).__init__()
         assert len(planes) in [2, 3, 4] and len(planes) == len(shortcut_cfg)
@@ -54,8 +54,8 @@ class TTFHead(AnchorHead):
         self.wh_gaussian = wh_gaussian
         self.alpha = alpha
         self.beta = beta
-        self.giou_weight = giou_weight
         self.hm_weight = hm_weight
+        self.wh_weight = wh_weight
         self.max_objs = max_objs
         self.fp16_enabled = False
 
@@ -64,25 +64,25 @@ class TTFHead(AnchorHead):
         self.wh_planes = 4 if wh_agnostic else 4 * self.num_fg
         self.base_loc = None
 
-        # repeat deconv n times. 32x to 4x by default.
-        self.deconv_layers = nn.ModuleList([
-            self._make_deconv_layer(inplanes[-1], planes[0], norm_cfg=norm_cfg),
-            self._make_deconv_layer(planes[0], planes[1], norm_cfg=norm_cfg)
+        # repeat upsampling n times. 32x to 4x by default.
+        self.upsample_layers = nn.ModuleList([
+            self.build_upsample(inplanes[-1], planes[0], norm_cfg=norm_cfg),
+            self.build_upsample(planes[0], planes[1], norm_cfg=norm_cfg)
         ])
         for i in range(2, len(planes)):
-            self.deconv_layers.append(
-                self._make_deconv_layer(planes[i - 1], planes[i], norm_cfg=norm_cfg))
+            self.upsample_layers.append(
+                self.build_upsample(planes[i - 1], planes[i], norm_cfg=norm_cfg))
 
         padding = (shortcut_kernel - 1) // 2
-        self.shortcut_layers = self._make_shortcut(
+        self.shortcut_layers = self.build_shortcut(
             inplanes[:-1][::-1][:len(planes)], planes, shortcut_cfg,
             kernel_size=shortcut_kernel, padding=padding)
 
         # heads
-        self.wh = self._make_conv_layer(self.wh_planes, wh_head_conv_num, wh_conv)
-        self.hm = self._make_conv_layer(self.num_fg, hm_head_conv_num)
+        self.wh = self.build_head(self.wh_planes, wh_head_conv_num, wh_conv)
+        self.hm = self.build_head(self.num_fg, hm_head_conv_num)
 
-    def _make_shortcut(self,
+    def build_shortcut(self,
                        inplanes,
                        planes,
                        shortcut_cfg,
@@ -99,7 +99,7 @@ class TTFHead(AnchorHead):
             shortcut_layers.append(layer)
         return shortcut_layers
 
-    def _make_deconv_layer(self, inplanes, planes, norm_cfg=None):
+    def build_upsample(self, inplanes, planes, norm_cfg=None):
         mdcn = ModulatedDeformConvPack(inplanes, planes, 3, stride=1,
                                        padding=1, dilation=1, deformable_groups=1)
         up = nn.UpsamplingBilinear2d(scale_factor=2)
@@ -113,7 +113,7 @@ class TTFHead(AnchorHead):
 
         return nn.Sequential(*layers)
 
-    def _make_conv_layer(self, out_channel, conv_num=1, head_conv_plane=None):
+    def build_head(self, out_channel, conv_num=1, head_conv_plane=None):
         head_convs = []
         head_conv_plane = self.head_conv if not head_conv_plane else head_conv_plane
         for i in range(conv_num):
@@ -129,7 +129,7 @@ class TTFHead(AnchorHead):
             if isinstance(m, nn.Conv2d):
                 kaiming_init(m)
 
-        for _, m in self.deconv_layers.named_modules():
+        for _, m in self.upsample_layers.named_modules():
             if isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -156,9 +156,9 @@ class TTFHead(AnchorHead):
             wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
-        for i, (deconv_layer, shortcut_layer) in enumerate(
-                zip(self.deconv_layers, self.shortcut_layers)):
-            x = deconv_layer(x)
+        for i, (upsample_layer, shortcut_layer) in enumerate(
+                zip(self.upsample_layers, self.shortcut_layers)):
+            x = upsample_layer(x)
             shortcut = shortcut_layer(feats[-i - 2])
             x = x + shortcut
 
@@ -205,10 +205,11 @@ class TTFHead(AnchorHead):
                             xs + wh[..., [2]], ys + wh[..., [3]]], dim=2)
 
         result_list = []
+        score_thr = getattr(cfg, 'score_thr', 0.01)
         for idx in range(bboxes.shape[0]):
             scores_per_img = scores[idx]
+            scores_keep = (scores_per_img > score_thr).squeeze(-1)
 
-            scores_keep = (scores_per_img > getattr(cfg, 'score_thr', 0.01)).squeeze(-1)
             scores_per_img = scores_per_img[scores_keep]
             bboxes_per_img = bboxes[idx][scores_keep]
             labels_per_img = clses[idx][scores_keep]
@@ -259,27 +260,28 @@ class TTFHead(AnchorHead):
     def gaussian_2d(self, shape, sigma_x=1, sigma_y=1):
         m, n = [(ss - 1.) / 2. for ss in shape]
         y, x = np.ogrid[-m:m + 1, -n:n + 1]
-    
+
         h = np.exp(-(x * x / (2 * sigma_x * sigma_x) + y * y / (2 * sigma_y * sigma_y)))
         h[h < np.finfo(h.dtype).eps * h.max()] = 0
         return h
-    
+
     def draw_truncate_gaussian(self, heatmap, center, h_radius, w_radius, k=1):
         h, w = 2 * h_radius + 1, 2 * w_radius + 1
         sigma_x = w / 6
         sigma_y = h / 6
         gaussian = self.gaussian_2d((h, w), sigma_x=sigma_x, sigma_y=sigma_y)
         gaussian = heatmap.new_tensor(gaussian)
-    
+
         x, y = int(center[0]), int(center[1])
-    
+
         height, width = heatmap.shape[0:2]
-    
+
         left, right = min(x, w_radius), min(width - x, w_radius + 1)
         top, bottom = min(y, h_radius), min(height - y, h_radius + 1)
-    
+
         masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
-        masked_gaussian = gaussian[h_radius - top:h_radius + bottom, w_radius - left:w_radius + right]
+        masked_gaussian = gaussian[h_radius - top:h_radius + bottom,
+                          w_radius - left:w_radius + right]
         if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0:
             torch.max(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
         return heatmap
@@ -349,7 +351,7 @@ class TTFHead(AnchorHead):
 
             fake_heatmap = fake_heatmap.zero_()
             self.draw_truncate_gaussian(fake_heatmap, ct_ints[k],
-                                   h_radiuses[k].item(), w_radiuses[k].item())
+                                        h_radiuses[k].item(), w_radiuses[k].item())
             heatmap[cls_id] = torch.max(heatmap[cls_id], fake_heatmap)
 
             if self.wh_gaussian:
@@ -442,9 +444,10 @@ class TTFHead(AnchorHead):
                                 self.base_loc + pred_wh[:, [2, 3]]), dim=1).permute(0, 2, 3, 1)
         # (batch, h, w, 4)
         boxes = box_target.permute(0, 2, 3, 1)
-        wh_loss = giou_loss(pred_boxes, boxes, mask, avg_factor=avg_factor) * self.giou_weight
+        wh_loss = giou_loss(pred_boxes, boxes, mask, avg_factor=avg_factor) * self.wh_weight
 
         return hm_loss, wh_loss
+
 
 class ShortcutConv2d(nn.Module):
 
@@ -453,29 +456,20 @@ class ShortcutConv2d(nn.Module):
                  out_channels,
                  kernel_sizes,
                  paddings,
-                 activation_last=False,
-                 use_prelu=False,
-                 shortcut_in_shortcut=False):
+                 activation_last=False):
         super(ShortcutConv2d, self).__init__()
         assert len(kernel_sizes) == len(paddings)
-        self.shortcut_in_shortcut = shortcut_in_shortcut
 
         layers = []
         for i, (kernel_size, padding) in enumerate(zip(kernel_sizes, paddings)):
             inc = in_channels if i == 0 else out_channels
             layers.append(nn.Conv2d(inc, out_channels, kernel_size, padding=padding))
             if i < len(kernel_sizes) - 1 or activation_last:
-                if use_prelu:
-                    layers.append(nn.PReLU(out_channels))
-                else:
-                    layers.append(nn.ReLU(inplace=True))
+                layers.append(nn.ReLU(inplace=True))
 
         self.layers = nn.Sequential(*layers)
         self.shortcut = nn.Conv2d(in_channels, out_channels, 3, padding=1)
 
     def forward(self, x):
         y = self.layers(x)
-        if self.shortcut_in_shortcut:
-            shortcut = self.shortcut(x)
-            y = shortcut + y
         return y
