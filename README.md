@@ -1,4 +1,4 @@
-# Training Time Friendly Network for Real-Time Object Detection 
+# Training-Time-Friendly Network for Real-Time Object Detection 
 
 The code for implementing the **TTFNet** for object detection.
 
@@ -54,4 +54,4 @@ Please consider citing our paper in your publications if the project helps your 
 ```
 
 ## License
-
+This project is released under the [Apache 2.0 license](LICENSE).
