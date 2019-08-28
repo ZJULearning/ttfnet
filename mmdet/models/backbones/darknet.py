@@ -7,13 +7,13 @@ from mmdet.models.utils import build_norm_layer
 
 from mmdet.models.registry import BACKBONES
 
+
 def common_conv2d(inplanes,
                   planes,
                   kernel,
                   padding,
                   stride,
                   norm_cfg=dict(type='BN')):
-    """A common conv-bn-leakyrelu cell"""
     cell = OrderedDict()
     cell['conv'] = nn.Conv2d(inplanes, planes, kernel_size=kernel,
                              stride=stride, padding=padding, bias=False)
@@ -70,7 +70,6 @@ class DarknetV3(nn.Module):
         self.norm_eval = norm_eval
         self.darknet_layer_name = []
 
-        # first 3x3 conv
         self.stem = common_conv2d(inplanes[0], planes[0], 3, 1, 1, norm_cfg=norm_cfg)
 
         for i, (nlayer, inchannel, channel) in enumerate(zip(layers[:self.num_stages],
@@ -84,7 +83,6 @@ class DarknetV3(nn.Module):
 
             layer.append(common_conv2d(inchannel, channel, 3, 1, 2, norm_cfg=norm_cfg))
 
-            # add nlayer basic blocks
             for _ in range(nlayer):
                 layer.append(DarknetBasicBlockV3(channel, channel // 2))
             self.add_module(layer_name, nn.Sequential(*layer))
@@ -120,7 +118,6 @@ class DarknetV3(nn.Module):
                 param.requires_grad = False
 
     def forward(self, x):
-        # D53: 18.1ms
         x = self.stem(x)
         outs = []
         for i, layer_name in enumerate(self.darknet_layer_name):
@@ -137,6 +134,5 @@ class DarknetV3(nn.Module):
         super(DarknetV3, self).train(mode)
         if mode and self.norm_eval:
             for m in self.modules():
-                # trick: eval have effect on BatchNorm only
                 if isinstance(m, nn.BatchNorm2d):
                     m.eval()
