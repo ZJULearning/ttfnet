@@ -40,9 +40,10 @@ class TTFHead(AnchorHead):
                  wh_weight=5.,
                  max_objs=128):
         super(AnchorHead, self).__init__()
-        assert len(planes) in [2, 3, 4] and len(planes) == len(shortcut_cfg)
+        assert len(planes) in [2, 3, 4]
+        shortcut_num = min(len(inplanes) - 1, len(planes))
+        assert shortcut_num == len(shortcut_cfg)
         assert wh_area_process in [None, 'norm', 'log', 'sqrt']
-        assert not wh_gaussian or (alpha == beta)
 
         self.planes = planes
         self.head_conv = head_conv
@@ -75,7 +76,7 @@ class TTFHead(AnchorHead):
 
         padding = (shortcut_kernel - 1) // 2
         self.shortcut_layers = self.build_shortcut(
-            inplanes[:-1][::-1][:len(planes)], planes, shortcut_cfg,
+            inplanes[:-1][::-1][:shortcut_num], planes[:shortcut_num], shortcut_cfg,
             kernel_size=shortcut_kernel, padding=padding)
 
         # heads
@@ -156,11 +157,11 @@ class TTFHead(AnchorHead):
             wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
-        for i, (deconv_layer, shortcut_layer) in enumerate(
-                zip(self.deconv_layers, self.shortcut_layers)):
-            x = deconv_layer(x)
-            shortcut = shortcut_layer(feats[-i - 2])
-            x = x + shortcut
+        for i, upsample_layer in enumerate(self.deconv_layers):
+            x = upsample_layer(x)
+            if i < len(self.shortcut_layers):
+                shortcut = self.shortcut_layers[i](feats[-i - 2])
+                x = x + shortcut
 
         hm = self.hm(x)
         wh = F.relu(self.wh(x)) * self.wh_offset_base
@@ -333,8 +334,11 @@ class TTFHead(AnchorHead):
                                 (gt_boxes[:, 1] + gt_boxes[:, 3]) / 2],
                                dim=1) / self.down_ratio).to(torch.int)
 
-        h_radiuses = (feat_hs / 2. * self.alpha).int()
-        w_radiuses = (feat_ws / 2. * self.alpha).int()
+        h_radiuses_alpha = (feat_hs / 2. * self.alpha).int()
+        w_radiuses_alpha = (feat_ws / 2. * self.alpha).int()
+        if self.alpha != self.beta:
+            h_radiuses_beta = (feat_hs / 2. * self.beta).int()
+            w_radiuses_beta = (feat_ws / 2. * self.beta).int()
 
         if not self.wh_gaussian:
             # calculate positive (center) regions
@@ -351,9 +355,13 @@ class TTFHead(AnchorHead):
 
             fake_heatmap = fake_heatmap.zero_()
             self.draw_truncate_gaussian(fake_heatmap, ct_ints[k],
-                                        h_radiuses[k].item(), w_radiuses[k].item())
+                                        h_radiuses_alpha[k].item(), w_radiuses_alpha[k].item())
             heatmap[cls_id] = torch.max(heatmap[cls_id], fake_heatmap)
 
+            if self.alpha != self.beta:
+                fake_heatmap = fake_heatmap.zero_()
+                self.draw_truncate_gaussian(fake_heatmap, ct_ints[k],
+                                            h_radiuses_beta[k].item(), w_radiuses_beta[k].item())
             if self.wh_gaussian:
                 box_target_inds = fake_heatmap > 0
             else:
