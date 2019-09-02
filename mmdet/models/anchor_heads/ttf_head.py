@@ -65,12 +65,12 @@ class TTFHead(AnchorHead):
         self.base_loc = None
 
         # repeat upsampling n times. 32x to 4x by default.
-        self.upsample_layers = nn.ModuleList([
+        self.deconv_layers = nn.ModuleList([
             self.build_upsample(inplanes[-1], planes[0], norm_cfg=norm_cfg),
             self.build_upsample(planes[0], planes[1], norm_cfg=norm_cfg)
         ])
         for i in range(2, len(planes)):
-            self.upsample_layers.append(
+            self.deconv_layers.append(
                 self.build_upsample(planes[i - 1], planes[i], norm_cfg=norm_cfg))
 
         padding = (shortcut_kernel - 1) // 2
@@ -129,7 +129,7 @@ class TTFHead(AnchorHead):
             if isinstance(m, nn.Conv2d):
                 kaiming_init(m)
 
-        for _, m in self.upsample_layers.named_modules():
+        for _, m in self.deconv_layers.named_modules():
             if isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
@@ -156,9 +156,9 @@ class TTFHead(AnchorHead):
             wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
-        for i, (upsample_layer, shortcut_layer) in enumerate(
-                zip(self.upsample_layers, self.shortcut_layers)):
-            x = upsample_layer(x)
+        for i, (deconv_layer, shortcut_layer) in enumerate(
+                zip(self.deconv_layers, self.shortcut_layers)):
+            x = deconv_layer(x)
             shortcut = shortcut_layer(feats[-i - 2])
             x = x + shortcut
 

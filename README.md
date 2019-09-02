@@ -13,7 +13,6 @@ The code for implementing the **TTFNet**.
 ![Graph](imgs/results.png)
 
 
-
 ![Table](imgs/table.png)
 
 TT stands for training time. * indicates that the model is not presented in the original paper, but we list these results to explore the performances of these work when adopting a light backbone network. All the training time is measured on 8 GTX 1080Ti, and all the inference speed is measured using converged models on 1 GTX 1080Ti. Note that the training time does not include the time consumed by evaluation.
