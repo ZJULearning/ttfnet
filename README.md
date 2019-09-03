@@ -7,7 +7,7 @@ The code for implementing the **TTFNet**.
 ## Highlights
 - **Simple:** Anchor-free, single-stage, light-head, no time-consuming post-processing. TTFNet only requires two detection heads for object localization and size regression, respectively.
 - **Training Time Friendly:**  Our TTFNet outperforms a range of real-time detectors while suppressing them in training time. Moreover, super-fast TTFNet-18 and TTFNet-53 can reach 25.9 AP / 112 FPS only after 2 hours and 32.9 AP / 55 FPS after about 3 hours on the MS COCO dataset using 8 GTX 1080Ti.
-- **Fast and Precise:** Our TTFNet-18/34/53 can achieve 27.9AP / 112FPS, 31.3AP / 87FPS, and 35.1AP / 54 FPS on 1 GTX 1080Ti.
+- **Fast and Precise:** Our TTFNet-18/34/53 can achieve 28.1AP / 112FPS, 31.3AP / 87FPS, and 35.1AP / 54 FPS on 1 GTX 1080Ti.
 
 ## Performances
 ![Graph](imgs/results.png)
@@ -21,7 +21,7 @@ TT stands for training time. * indicates that the model is not presented in the 
 ## Installation
 Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). We will submit a pull request soon. 
 
-Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md), and .
+Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md).
 
 ## Inference
 
@@ -58,18 +58,10 @@ The following commands will train TTFNet-18 on 8 GPUs for 24 epochs and TTFNet-5
 ## Citations
 Please consider citing our paper in your publications if the project helps your research. BibTeX reference is as follows.
 ```
-
-```
-
-Thanks for the work of mmdetection toolbox. Their BibTeX reference is as follows.
-```
-@article{mmdetection,
-  title   = {{MMDetection}: Open MMLab Detection Toolbox and Benchmark},
-  author  = {Kai Chen, Jiaqi Wang, Jiangmiao Pang, Yuhang Cao, Yu Xiong, Xiaoxiao Li,
-             Shuyang Sun, Wansen Feng, Ziwei Liu, Jiarui Xu, Zheng Zhang, Dazhi Cheng,
-             Chenchen Zhu, Tianheng Cheng, Qijie Zhao, Buyu Li, Xin Lu, Rui Zhu, Yue Wu,
-             Jifeng Dai, Jingdong Wang, Jianping Shi, Wanli Ouyang, Chen Change Loy, Dahua Lin},
-  journal = {arXiv preprint arXiv:1906.07155},
+@article{liu2019training,
+  title   = {Training-Time-Friendly Network for Real-Time Object Detection},
+  author  = {Zili Liu, Tu Zheng, Guodong Xu, Haifeng Liu, Deng Cai},
+  journal = {arXiv preprint arXiv:1909.<to be added>},
   year    = {2019}
 }
 ```
