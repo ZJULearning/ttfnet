@@ -476,7 +476,6 @@ class ShortcutConv2d(nn.Module):
                 layers.append(nn.ReLU(inplace=True))
 
         self.layers = nn.Sequential(*layers)
-        self.shortcut = nn.Conv2d(in_channels, out_channels, 3, padding=1)
 
     def forward(self, x):
         y = self.layers(x)

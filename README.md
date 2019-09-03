@@ -19,9 +19,9 @@ TT stands for training time. * indicates that the model is not presented in the 
 
 
 ## Installation
-Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). We will submit a pull request soon. 
+Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md). We will submit a pull request soon. 
 
-Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md).
+Note that the darknet part was transplanted (i.e., MXNet => Pytorch) from another toolbox [Gluoncv](https://github.com/dmlc/gluon-cv). In addition, portions of the code are borrowed from [CornerNet](https://github.com/princeton-vl/CornerNet) and [CenterNet](https://github.com/xingyizhou/CenterNet). Thanks for their work !
 
 ## Inference
 
@@ -35,7 +35,7 @@ We provide the following converged models.
 | TTFNet-53 (1x) | 3.1            | 54.8  | 32.9        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EZVE_d6oR_VGrDD4IZS2ppIB0lm2V8UaBkgFUjuEM7oRZA?e=XVLRwx) |
 | TTFNet-53 (2x) | 6.1            | 54.4  | 35.1        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Ed1Qxlom3FpGmNZI9dnHau8BtXF0rPeHSYGn6HkoXOEB3A?e=NfPjrZ) |
 
-We also provide the pretrained [Darknet53](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaXXohf5LgBNji6bkxrARN4BZ9N4sEedaINPeqexu5l2jA?e=nJhe8L) here. Note that the darknet part was transplanted (i.e., MXNet => Pytorch) from another toolbox [Gluoncv](https://github.com/dmlc/gluon-cv). Thanks for their work !
+We also provide the pretrained [Darknet53](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaXXohf5LgBNji6bkxrARN4BZ9N4sEedaINPeqexu5l2jA?e=nJhe8L) here. 
 
 The following command will evaluate converged TTFNet-53 on 8 GPUs:
 
