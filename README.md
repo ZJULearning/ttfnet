@@ -61,7 +61,7 @@ Please consider citing our paper in your publications if the project helps your 
 @article{liu2019training,
   title   = {Training-Time-Friendly Network for Real-Time Object Detection},
   author  = {Zili Liu, Tu Zheng, Guodong Xu, Haifeng Liu, Deng Cai},
-  journal = {arXiv preprint arXiv:1909.<to be added>},
+  journal = {arXiv preprint arXiv:1909.00700},
   year    = {2019}
 }
 ```
