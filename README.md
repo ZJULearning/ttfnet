@@ -15,7 +15,9 @@ The code for implementing the **[TTFNet](https://arxiv.org/abs/1909.00700)**.
 
 ![Table](imgs/table.png)
 
-TT stands for training time. * indicates that the model is not presented in the original paper, but we list these results to explore the performances of these work when adopting a light backbone network. All the training time is measured on 8 GTX 1080Ti, and all the inference speed is measured using converged models on 1 GTX 1080Ti. Note that the training time does not include the time consumed by evaluation.
+TT stands for training time. * indicates that the model is not presented in the original paper, but we list these results to explore the performances of these work when adopting a light backbone network.
+
+All the training time is measured on 8 GTX 1080Ti, and all the inference speed is measured using converged models on 1 GTX 1080Ti. Note that the training time does not include the time consumed by evaluation.
 
 
 ## Installation
@@ -29,13 +31,13 @@ We provide the following converged models.
 
 | Model          | Training Hours | FPS   | AP(minival) | Link                                                         |
 | -------------- | -------------- | ----- | ----------- | ------------------------------------------------------------ |
-| TTFNet-18 (1x) | 1.8            | 112.2 | 25.9        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaCB-TKnqURNoyl_P-uxClABsSz35Nmu-L1T3SObBnHYMw?e=HxGXPE) |
-| TTFNet-18 (2x) | 3.6            | 112.3 | 28.1        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Ef2CVhUYfOJDjzrlQfZGWxwBvUqnXu3mJ0pweiSEuPNYag?e=iJwPPv) |
-| TTFNet-34 (2x) | 4.1            | 86.6  | 31.3        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Eb0Ab71mpsFBvBP2_GsJ4tUBRGM8NvAym9qZxPqJGtyWSA?e=6Y7BU7) |
-| TTFNet-53 (1x) | 3.1            | 54.8  | 32.9        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EZVE_d6oR_VGrDD4IZS2ppIB0lm2V8UaBkgFUjuEM7oRZA?e=XVLRwx) |
-| TTFNet-53 (2x) | 6.1            | 54.4  | 35.1        | [Download](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/Ed1Qxlom3FpGmNZI9dnHau8BtXF0rPeHSYGn6HkoXOEB3A?e=NfPjrZ) |
+| TTFNet-18 (1x) | 1.8            | 112.2 | 25.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_1x-fe6884.pth) |
+| TTFNet-18 (2x) | 3.6            | 112.3 | 28.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_2x-37373a.pth) |
+| TTFNet-34 (2x) | 4.1            | 86.6  | 31.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet34_2x-0577d0.pth) |
+| TTFNet-53 (1x) | 3.1            | 54.8  | 32.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_1x-4811e4.pth) |
+| TTFNet-53 (2x) | 6.1            | 54.4  | 35.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_2x-b381dd.pth) |
 
-We also provide the pretrained [Darknet53](https://zjueducn-my.sharepoint.com/:u:/g/personal/11921047_zju_edu_cn/EaXXohf5LgBNji6bkxrARN4BZ9N4sEedaINPeqexu5l2jA?e=nJhe8L) here. 
+We also provide the pretrained [Darknet53](http://downloads.zjulearning.org.cn/ttfnet/darknet53_pretrain-9ec35d.pth) here. 
 
 The following command will evaluate converged TTFNet-53 on 8 GPUs:
 
