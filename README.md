@@ -1,6 +1,6 @@
 # Training-Time-Friendly Network for Real-Time Object Detection 
 
-The code for implementing the **TTFNet**. 
+The code for implementing the **[TTFNet](https://arxiv.org/abs/1909.00700)**. 
 
 ![image-20190807160835333](imgs/structure.png)
 
