@@ -438,7 +438,7 @@ class TTFHead(AnchorHead):
         mask = wh_weight.view(-1, H, W)
         avg_factor = mask.sum() + 1e-4
 
-        if self.base_loc is None:
+        if self.base_loc is None or H != self.base_loc.shape[1] or W != self.base_loc.shape[2]:
             base_step = self.down_ratio
             shifts_x = torch.arange(0, (W - 1) * base_step + 1, base_step,
                                     dtype=torch.float32, device=heatmap.device)
