@@ -90,7 +90,7 @@ lr_config = dict(
     policy='step',
     warmup='linear',
     warmup_iters=500,
-    warmup_ratio=1.0 / 5,
+    warmup_ratio=1.0 / 10,
     step=[9, 11])
 checkpoint_config = dict(interval=4)
 bbox_head_hist_config = dict(
