@@ -214,7 +214,7 @@ class TTFHead(AnchorHead):
             scores_per_img = scores_per_img[scores_keep]
             bboxes_per_img = bboxes[idx][scores_keep]
             labels_per_img = clses[idx][scores_keep]
-            img_shape = img_metas[idx]['img_shape']
+            img_shape = img_metas[idx]['pad_shape']
             bboxes_per_img[:, 0::2] = bboxes_per_img[:, 0::2].clamp(min=0, max=img_shape[1] - 1)
             bboxes_per_img[:, 1::2] = bboxes_per_img[:, 1::2].clamp(min=0, max=img_shape[0] - 1)
 
