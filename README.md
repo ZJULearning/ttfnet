@@ -1,69 +1,160 @@
-# Training-Time-Friendly Network for Real-Time Object Detection 
 
-The code for implementing the **[TTFNet](https://arxiv.org/abs/1909.00700)**. 
+# MMDetection
 
-![image-20190807160835333](imgs/structure.png)
+**News**: We released the technical report on [ArXiv](https://arxiv.org/abs/1906.07155).
 
-## Highlights
-- **Simple:** Anchor-free, single-stage, light-head, no time-consuming post-processing. TTFNet only requires two detection heads for object localization and size regression, respectively.
-- **Training Time Friendly:**  Our TTFNet outperforms a range of real-time detectors while suppressing them in training time. Moreover, super-fast TTFNet-18 and TTFNet-53 can reach 25.9 AP / 112 FPS only after 2 hours and 32.9 AP / 55 FPS after about 3 hours on the MS COCO dataset using 8 GTX 1080Ti.
-- **Fast and Precise:** Our TTFNet-18/34/53 can achieve 28.1AP / 112FPS, 31.3AP / 87FPS, and 35.1AP / 54 FPS on 1 GTX 1080Ti.
+## Introduction
 
-## Performances
-![Graph](imgs/results.png)
+The master branch works with **PyTorch 1.1** or higher.
 
+mmdetection is an open source object detection toolbox based on PyTorch. It is
+a part of the open-mmlab project developed by [Multimedia Laboratory, CUHK](http://mmlab.ie.cuhk.edu.hk/).
 
-![Table](imgs/table.png)
+![demo image](demo/coco_test_12510.jpg)
 
-TT stands for training time. * indicates that the model is not presented in the original paper, but we list these results to explore the performances of these work when adopting a light backbone network.
+### Major features
 
-All the training time is measured on 8 GTX 1080Ti, and all the inference speed is measured using converged models on 1 GTX 1080Ti. Note that the training time does not include the time consumed by evaluation.
+- **Modular Design**
+
+  We decompose the detection framework into different components and one can easily construct a customized object detection framework by combining different modules.
+
+- **Support of multiple frameworks out of box**
+
+  The toolbox directly supports popular and contemporary detection frameworks, *e.g.* Faster RCNN, Mask RCNN, RetinaNet, etc.
+
+- **High efficiency**
+
+  All basic bbox and mask operations run on GPUs now. The training speed is faster than or comparable to other codebases, including [Detectron](https://github.com/facebookresearch/Detectron), [maskrcnn-benchmark](https://github.com/facebookresearch/maskrcnn-benchmark) and [SimpleDet](https://github.com/TuSimple/simpledet).
+
+- **State of the art**
+
+  The toolbox stems from the codebase developed by the *MMDet* team, who won [COCO Detection Challenge](http://cocodataset.org/#detection-leaderboard) in 2018, and we keep pushing it forward.
+
+Apart from MMDetection, we also released a library [mmcv](https://github.com/open-mmlab/mmcv) for computer vision research, which is heavily depended on by this toolbox.
+
+## License
+
+This project is released under the [Apache 2.0 license](LICENSE).
+
+## Updates
+
+v1.0rc0 (27/07/2019)
+- Implement lots of new methods and components (Mixed Precision Training, HTC, Libra R-CNN, Guided Anchoring, Empirical Attention, Mask Scoring R-CNN, Grid R-CNN (Plus), GHM, GCNet, FCOS, HRNet, Weight Standardization, etc.). Thank all collaborators!
+- Support two additional datasets: WIDER FACE and Cityscapes.
+- Refactoring for loss APIs and make it more flexible to adopt different losses and related hyper-parameters.
+- Speed up multi-gpu testing.
+- Integrate all compiling and installing in a single script.
+
+v0.6.0 (14/04/2019)
+- Up to 30% speedup compared to the model zoo.
+- Support both PyTorch stable and nightly version.
+- Replace NMS and SigmoidFocalLoss with Pytorch CUDA extensions.
+
+v0.6rc0(06/02/2019)
+- Migrate to PyTorch 1.0.
+
+v0.5.7 (06/02/2019)
+- Add support for Deformable ConvNet v2. (Many thanks to the authors and [@chengdazhi](https://github.com/chengdazhi))
+- This is the last release based on PyTorch 0.4.1.
+
+v0.5.6 (17/01/2019)
+- Add support for Group Normalization.
+- Unify RPNHead and single stage heads (RetinaHead, SSDHead) with AnchorHead.
+
+v0.5.5 (22/12/2018)
+- Add SSD for COCO and PASCAL VOC.
+- Add ResNeXt backbones and detection models.
+- Refactoring for Samplers/Assigners and add OHEM.
+- Add VOC dataset and evaluation scripts.
+
+v0.5.4 (27/11/2018)
+- Add SingleStageDetector and RetinaNet.
+
+v0.5.3 (26/11/2018)
+- Add Cascade R-CNN and Cascade Mask R-CNN.
+- Add support for Soft-NMS in config files.
+
+v0.5.2 (21/10/2018)
+- Add support for custom datasets.
+- Add a script to convert PASCAL VOC annotations to the expected format.
+
+v0.5.1 (20/10/2018)
+- Add BBoxAssigner and BBoxSampler, the `train_cfg` field in config files are restructured.
+- `ConvFCRoIHead` / `SharedFCRoIHead` are renamed to `ConvFCBBoxHead` / `SharedFCBBoxHead` for consistency.
+
+## Benchmark and model zoo
+
+Supported methods and backbones are shown in the below table.
+Results and models are available in the [Model zoo](docs/MODEL_ZOO.md).
+
+|                    | ResNet   | ResNeXt  | SENet    | VGG      | HRNet |
+|--------------------|:--------:|:--------:|:--------:|:--------:|:-----:|
+| RPN                | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Fast R-CNN         | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Faster R-CNN       | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Mask R-CNN         | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Cascade R-CNN      | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Cascade Mask R-CNN | ✓        | ✓        | ☐        | ✗        | ✓     |
+| SSD                | ✗        | ✗        | ✗        | ✓        | ✗     |
+| RetinaNet          | ✓        | ✓        | ☐        | ✗        | ✓     |
+| GHM                | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Mask Scoring R-CNN | ✓        | ✓        | ☐        | ✗        | ✓     |
+| FCOS               | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Double-Head R-CNN  | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Grid R-CNN (Plus)  | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Hybrid Task Cascade| ✓        | ✓        | ☐        | ✗        | ✓     |
+| Libra R-CNN        | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Guided Anchoring   | ✓        | ✓        | ☐        | ✗        | ✓     |
+
+Other features
+- [x] DCNv2
+- [x] Group Normalization
+- [x] Weight Standardization
+- [x] OHEM
+- [x] Soft-NMS
+- [x] Generalized Attention
+- [x] GCNet
+- [x] Mixed Precision (FP16) Training
 
 
 ## Installation
-Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md). We will submit a pull request soon. 
 
-Note that the darknet part was transplanted (i.e., MXNet => Pytorch) from another toolbox [Gluoncv](https://github.com/dmlc/gluon-cv). In addition, portions of the code are borrowed from [CornerNet](https://github.com/princeton-vl/CornerNet) and [CenterNet](https://github.com/xingyizhou/CenterNet). Thanks for their work !
+Please refer to [INSTALL.md](docs/INSTALL.md) for installation and dataset preparation.
 
-## Inference
 
-We provide the following converged models. 
+## Get Started
 
-| Model          | Training Hours | FPS   | AP(minival) | Link                                                         |
-| -------------- | -------------- | ----- | ----------- | ------------------------------------------------------------ |
-| TTFNet-18 (1x) | 1.8            | 112.2 | 25.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_1x-fe6884.pth) |
-| TTFNet-18 (2x) | 3.6            | 112.3 | 28.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_2x-37373a.pth) |
-| TTFNet-34 (2x) | 4.1            | 86.6  | 31.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet34_2x-0577d0.pth) |
-| TTFNet-53 (1x) | 3.1            | 54.8  | 32.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_1x-4811e4.pth) |
-| TTFNet-53 (2x) | 6.1            | 54.4  | 35.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_2x-b381dd.pth) |
+Please see [GETTING_STARTED.md](docs/GETTING_STARTED.md) for the basic usage of MMDetection.
 
-We also provide the pretrained [Darknet53](http://downloads.zjulearning.org.cn/ttfnet/darknet53_pretrain-9ec35d.pth) here. 
+## Contributing
 
-The following command will evaluate converged TTFNet-53 on 8 GPUs:
+We appreciate all contributions to improve MMDetection. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
 
-```
-./tools/dist_test.sh configs/ttfnet/ttfnet_d53_2x.py /path/to/the/checkpoint 8
-```
+## Acknowledgement
 
-## Training
+MMDetection is an open source project that is contributed by researchers and engineers from various colleges and companies. We appreciate all the contributors who implement their methods or add new features, as well as users who give valuable feedbacks.
+We wish that the toolbox and benchmark could serve the growing research community by providing a flexible toolkit to reimplement existing methods and develop their own new detectors.
 
-The following commands will train TTFNet-18 on 8 GPUs for 24 epochs and TTFNet-53 on 8 GPUs for 12 epochs:
+
+## Citation
+
+If you use this toolbox or benchmark in your research, please cite this project.
 
 ```
-./tools/dist_train.sh configs/ttfnet/ttfnet_r18_2x.py 8
-```
-
-```
-./tools/dist_train.sh configs/ttfnet/ttfnet_d53_1x.py 8
-```
-
-## Citations
-Please consider citing our paper in your publications if the project helps your research. BibTeX reference is as follows.
-```
-@article{liu2019training,
-  title   = {Training-Time-Friendly Network for Real-Time Object Detection},
-  author  = {Zili Liu, Tu Zheng, Guodong Xu, Zheng Yang, Haifeng Liu, Deng Cai},
-  journal = {arXiv preprint arXiv:1909.00700},
-  year    = {2019}
+@article{mmdetection,
+  title   = {{MMDetection}: Open MMLab Detection Toolbox and Benchmark},
+  author  = {Chen, Kai and Wang, Jiaqi and Pang, Jiangmiao and Cao, Yuhang and
+             Xiong, Yu and Li, Xiaoxiao and Sun, Shuyang and Feng, Wansen and
+             Liu, Ziwei and Xu, Jiarui and Zhang, Zheng and Cheng, Dazhi and
+             Zhu, Chenchen and Cheng, Tianheng and Zhao, Qijie and Li, Buyu and
+             Lu, Xin and Zhu, Rui and Wu, Yue and Dai, Jifeng and Wang, Jingdong
+             and Shi, Jianping and Ouyang, Wanli and Loy, Chen Change and Lin, Dahua},
+  journal= {arXiv preprint arXiv:1906.07155},
+  year={2019}
 }
 ```
+
+
+## Contact
+
+This repo is currently maintained by Kai Chen ([@hellock](http://github.com/hellock)), Jiangmiao Pang ([@OceanPang](https://github.com/OceanPang)), Jiaqi Wang ([@myownskyW7](https://github.com/myownskyW7)) and Yuhang Cao ([@yhcao6](https://github.com/yhcao6)).

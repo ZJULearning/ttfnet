@@ -2,11 +2,13 @@ import os
 import platform
 import subprocess
 import time
-from setuptools import Extension, find_packages, setup
+from setuptools import Extension, dist, find_packages, setup
 
-import numpy as np
-from Cython.Build import cythonize
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
+
+dist.Distribution().fetch_build_eggs(['Cython', 'numpy>=1.11.1'])
+import numpy as np  # noqa: E402
+from Cython.Build import cythonize  # noqa: E402
 
 
 def readme():
@@ -117,6 +119,13 @@ def make_cython_ext(name, module, sources):
     return extension
 
 
+def get_requirements(filename='requirements.txt'):
+    here = os.path.dirname(os.path.realpath(__file__))
+    with open(os.path.join(here, filename), 'r') as f:
+        requires = [line.replace('\n', '') for line in f.readlines()]
+    return requires
+
+
 if __name__ == '__main__':
     write_version_py()
     setup(
@@ -124,6 +133,8 @@ if __name__ == '__main__':
         version=get_version(),
         description='Open MMLab Detection Toolbox and Benchmark',
         long_description=readme(),
+        author='OpenMMLab',
+        author_email='chenkaidev@gmail.com',
         keywords='computer vision, object detection',
         url='https://github.com/open-mmlab/mmdetection',
         packages=find_packages(exclude=('configs', 'tools', 'demo')),
@@ -141,11 +152,8 @@ if __name__ == '__main__':
         ],
         license='Apache License 2.0',
         setup_requires=['pytest-runner', 'cython', 'numpy'],
-        tests_require=['pytest'],
-        install_requires=[
-            'mmcv>=0.2.10', 'numpy', 'matplotlib', 'six', 'terminaltables',
-            'pycocotools', 'torch>=1.1', 'imagecorruptions'
-        ],
+        tests_require=['pytest', 'xdoctest'],
+        install_requires=get_requirements(),
         ext_modules=[
             make_cython_ext(
                 name='soft_nms_cpu',
