@@ -155,11 +155,11 @@ class TTFHead(AnchorHead):
             wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
-        for i, upsample_layer in enumerate(self.deconv_layers):
-            x = upsample_layer(x)
-            if i < len(self.shortcut_layers):
-                shortcut = self.shortcut_layers[i](feats[-i - 2])
-                x = x + shortcut
+        # for i, upsample_layer in enumerate(self.deconv_layers):
+        #     x = upsample_layer(x)
+        #     if i < len(self.shortcut_layers):
+        #         shortcut = self.shortcut_layers[i](feats[-i - 2])
+        #         x = x + shortcut
 
         hm = self.hm(x)
         wh = F.relu(self.wh(x)) * self.wh_offset_base
