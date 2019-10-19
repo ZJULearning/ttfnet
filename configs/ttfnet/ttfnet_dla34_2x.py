@@ -1,7 +1,8 @@
 # model settings
 model = dict(
     type='TTFNet',
-    pretrained='modelzoo://resnet18',
+    # pretrained='modelzoo://resnet18',
+    pretrained='/private/zhengtu/dla34-ba72cf86.pth',
     backbone=dict(
         type='DLASeg',
         base_name='dla34',
@@ -10,13 +11,13 @@ model = dict(
         down_ratio=4,
         final_kernel=1,
         last_level=5,
-        head_conv=128,
+        head_conv=256,
         ),
     neck=None,
     bbox_head=dict(
         type='TTFHead',
         inplanes=(64, 128, 256, 512),
-        head_conv=128,
+        head_conv=256,
         wh_conv=64,
         hm_head_conv_num=2,
         wh_head_conv_num=1,
@@ -83,7 +84,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=0.012, momentum=0.9, weight_decay=0.0004,
+optimizer = dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=0.0004,
                  paramwise_options=dict(bias_lr_mult=2., bias_decay_mult=0.))
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy

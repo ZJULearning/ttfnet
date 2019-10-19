@@ -2,6 +2,7 @@ import os
 import torch.nn as nn
 
 from mmcv.cnn import constant_init, kaiming_init
+from mmcv.runner import load_checkpoint
 from collections import OrderedDict
 from mmdet.models.utils import build_norm_layer
 
@@ -344,19 +345,20 @@ def fill_up_weights(up):
         w[c, 0, :, :] = w[0, 0, :, :]
 
 
-# class DeformConv(nn.Module):
-#     def __init__(self, chi, cho):
-#         super(DeformConv, self).__init__()
-#         self.actf = nn.Sequential(
-#             nn.BatchNorm2d(cho, momentum=BN_MOMENTUM),
-#             nn.ReLU(inplace=True)
-#         )
-#         self.conv = DCN(chi, cho, kernel_size=(3,3), stride=1, padding=1, dilation=1, deformable_groups=1)
-# 
-#     def forward(self, x):
-#         x = self.conv(x)
-#         x = self.actf(x)
-#         return x
+class DeformConv(nn.Module):
+    def __init__(self, chi, cho):
+        super(DeformConv, self).__init__()
+        self.actf = nn.Sequential(
+            nn.BatchNorm2d(cho, momentum=BN_MOMENTUM),
+            nn.ReLU(inplace=True)
+        )
+        self.conv = ModulatedDeformConvPack(chi, cho, kernel_size=(3,3), stride=1, padding=1,
+                                            dilation=1, deformable_groups=1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.actf(x)
+        return x
 
 
 class IDAUp(nn.Module):
@@ -366,11 +368,8 @@ class IDAUp(nn.Module):
         for i in range(1, len(channels)):
             c = channels[i]
             f = int(up_f[i])  
-            # proj = deformconv(c, o)
-            # node = deformconv(o, o)
-            proj = ModulatedDeformConvPack(c, o, 3, padding=1)
-            node = ModulatedDeformConvPack(o, o, 3, padding=1)
-            
+            proj = DeformConv(c, o)
+            node = DeformConv(o, o)
      
             up = nn.ConvTranspose2d(o, o, f * 2, stride=f, 
                                     padding=f // 2, output_padding=0,
@@ -475,7 +474,9 @@ class DLASeg(nn.Module):
         #     self.__setattr__(head, fc)
 
     def init_weights(self, pretrained=None):
-        pass
+        if isinstance(pretrained, str):
+            logger = logging.getLogger()
+            load_checkpoint(self, pretrained, strict=False, logger=logger)
 
     def forward(self, x):
         x = self.base(x)
