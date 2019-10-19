@@ -6,7 +6,7 @@ model = dict(
         type='DLASeg',
         base_name='dla34',
         heads=None,
-        pretrained=True,
+        pretrained=False,
         down_ratio=4,
         final_kernel=1,
         last_level=5,
@@ -19,7 +19,7 @@ model = dict(
         head_conv=128,
         wh_conv=64,
         hm_head_conv_num=2,
-        wh_head_conv_num=1,
+        wh_head_conv_num=2,
         num_classes=81,
         wh_offset_base=16,
         wh_agnostic=True,
@@ -68,6 +68,18 @@ data = dict(
         with_mask=False,
         with_crowd=False,
         with_label=True,
+        extra_aug=dict(
+            photo_metric_distortion=dict(
+                brightness_delta=32,
+                contrast_range=(0.5, 1.5),
+                saturation_range=(0.5, 1.5),
+                hue_delta=18),
+            expand=dict(
+                mean=img_norm_cfg['mean'],
+                to_rgb=img_norm_cfg['to_rgb'],
+                ratio_range=(1, 4)),
+            random_crop=dict(
+                min_ious=(0.1, 0.3, 0.5, 0.7, 0.9), min_crop_size=0.3)),
         resize_keep_ratio=False),
     test=dict(
         type=dataset_type,
@@ -83,7 +95,7 @@ data = dict(
         test_mode=True,
         resize_keep_ratio=False))
 # optimizer
-optimizer = dict(type='SGD', lr=0.012, momentum=0.9, weight_decay=0.0004,
+optimizer = dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=0.0004,
                  paramwise_options=dict(bias_lr_mult=2., bias_decay_mult=0.))
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
@@ -92,7 +104,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
-    step=[18, 22])
+    step=[90, 110])
 checkpoint_config = dict(interval=4)
 bbox_head_hist_config = dict(
     model_type=['ConvModule', 'DeformConvPack'],
@@ -105,11 +117,11 @@ log_config = dict(
     ])
 # yapf:enable
 # runtime settings
-total_epochs = 24
+total_epochs = 120
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ttfnet_dla34_2x'
+work_dir = './work_dirs/ttfnet_dla34_10x_aug'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
