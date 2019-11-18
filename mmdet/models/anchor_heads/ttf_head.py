@@ -155,11 +155,11 @@ class TTFHead(AnchorHead):
             wh: tensor, (batch, 4, h, w) or (batch, 80 * 4, h, w).
         """
         x = feats[-1]
-        # for i, upsample_layer in enumerate(self.deconv_layers):
-        #     x = upsample_layer(x)
-        #     if i < len(self.shortcut_layers):
-        #         shortcut = self.shortcut_layers[i](feats[-i - 2])
-        #         x = x + shortcut
+        for i, upsample_layer in enumerate(self.deconv_layers):
+            x = upsample_layer(x)
+            if i < len(self.shortcut_layers):
+                shortcut = self.shortcut_layers[i](feats[-i - 2])
+                x = x + shortcut
 
         hm = self.hm(x)
         wh = F.relu(self.wh(x)) * self.wh_offset_base
@@ -205,19 +205,19 @@ class TTFHead(AnchorHead):
 
         result_list = []
         score_thr = getattr(cfg, 'score_thr', 0.01)
-        for idx in range(bboxes.shape[0]):
-            scores_per_img = scores[idx]
+        for batch_i in range(bboxes.shape[0]):
+            scores_per_img = scores[batch_i]
             scores_keep = (scores_per_img > score_thr).squeeze(-1)
 
             scores_per_img = scores_per_img[scores_keep]
-            bboxes_per_img = bboxes[idx][scores_keep]
-            labels_per_img = clses[idx][scores_keep]
-            img_shape = img_metas[idx]['pad_shape']
+            bboxes_per_img = bboxes[batch_i][scores_keep]
+            labels_per_img = clses[batch_i][scores_keep]
+            img_shape = img_metas[batch_i]['pad_shape']
             bboxes_per_img[:, 0::2] = bboxes_per_img[:, 0::2].clamp(min=0, max=img_shape[1] - 1)
             bboxes_per_img[:, 1::2] = bboxes_per_img[:, 1::2].clamp(min=0, max=img_shape[0] - 1)
 
             if rescale:
-                scale_factor = img_metas[idx]['scale_factor']
+                scale_factor = img_metas[batch_i]['scale_factor']
                 bboxes_per_img /= bboxes_per_img.new_tensor(scale_factor)
 
             bboxes_per_img = torch.cat([bboxes_per_img, scores_per_img], dim=1)
