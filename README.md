@@ -10,7 +10,7 @@ The code for implementing the **[TTFNet](https://arxiv.org/abs/1909.00700)** (Ac
 - **Fast and Precise:** Our TTFNet-18/34/53 can achieve 28.1AP / 112FPS, 31.3AP / 87FPS, and 35.1AP / 54 FPS on 1 GTX 1080Ti.
 
 ## Performances
-<img src="imgs/table2.png" alt="Table" style="zoom:50%;" />
+<img src="imgs/table2.png" alt="Table" width=300 />
 
 ![Table](imgs/table1.png)
 
