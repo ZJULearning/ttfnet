@@ -1,8 +1,7 @@
 # model settings
 model = dict(
     type='TTFNet',
-    # pretrained='modelzoo://resnet18',
-    pretrained='/private/zhengtu/dla34-ba72cf86.pth',
+    pretrained='/pretrain/dla34-ba72cf86.pth',
     backbone=dict(
         type='DLASeg',
         base_name='dla34',
@@ -11,12 +10,12 @@ model = dict(
         down_ratio=4,
         final_kernel=1,
         last_level=5,
-        head_conv=256,
-        ),
+        head_conv=256),
     neck=None,
     bbox_head=dict(
         type='TTFHead',
         inplanes=(64, 128, 256, 512),
+        use_dla=True,
         head_conv=256,
         wh_conv=64,
         hm_head_conv_num=2,
@@ -43,46 +42,49 @@ dataset_type = 'CocoDataset'
 data_root = 'data/coco/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
+train_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(type='LoadAnnotations', with_bbox=True),
+    dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
+    dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
+    dict(type='DefaultFormatBundle'),
+    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
+]
+test_pipeline = [
+    dict(type='LoadImageFromFile'),
+    dict(
+        type='MultiScaleFlipAug',
+        img_scale=(512, 512),
+        flip=False,
+        transforms=[
+            dict(type='Resize', keep_ratio=False),
+            dict(type='RandomFlip'),
+            dict(type='Normalize', **img_norm_cfg),
+            dict(type='Pad', size_divisor=32),
+            dict(type='ImageToTensor', keys=['img']),
+            dict(type='Collect', keys=['img']),
+        ])
+]
 data = dict(
-    imgs_per_gpu=16,
+    imgs_per_gpu=12,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
         img_prefix=data_root + 'train2017/',
-        img_scale=(512, 512),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0.5,
-        with_mask=False,
-        with_crowd=False,
-        with_label=True,
-        resize_keep_ratio=False),
+        pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(512, 512),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_crowd=False,
-        with_label=True,
-        resize_keep_ratio=False),
+        pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_val2017.json',
         img_prefix=data_root + 'val2017/',
-        img_scale=(512, 512),
-        img_norm_cfg=img_norm_cfg,
-        size_divisor=32,
-        flip_ratio=0,
-        with_mask=False,
-        with_crowd=False,
-        with_label=False,
-        test_mode=True,
-        resize_keep_ratio=False))
+        pipeline=test_pipeline))
 # optimizer
 optimizer = dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=0.0004,
                  paramwise_options=dict(bias_lr_mult=2., bias_decay_mult=0.))
@@ -94,13 +96,9 @@ lr_config = dict(
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
     step=[18, 22])
-checkpoint_config = dict(interval=4)
-bbox_head_hist_config = dict(
-    model_type=['ConvModule', 'DeformConvPack'],
-    sub_modules=['bbox_head'],
-    save_every_n_steps=500)
+checkpoint_config = dict(interval=8)
 log_config = dict(
-    interval=50,
+    interval=20,
     hooks=[
         dict(type='TextLoggerHook'),
     ])

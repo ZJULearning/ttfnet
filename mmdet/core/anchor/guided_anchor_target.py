@@ -4,7 +4,7 @@ from ..bbox import PseudoSampler, build_assigner, build_sampler
 from ..utils import multi_apply, unmap
 
 
-def calc_region(bbox, ratio, featmap_size=None, use_round=True):
+def calc_region(bbox, ratio, featmap_size=None):
     """Calculate a proportional bbox region.
 
     The bbox center are fixed and the new h' and w' is h * ratio and w * ratio.
@@ -13,17 +13,14 @@ def calc_region(bbox, ratio, featmap_size=None, use_round=True):
         bbox (Tensor): Bboxes to calculate regions, shape (n, 4)
         ratio (float): Ratio of the output region.
         featmap_size (tuple): Feature map size used for clipping the boundary.
-        use_round (bool): whether to round the results.
 
     Returns:
         tuple: x1, y1, x2, y2
     """
-    x1 = (1 - ratio) * bbox[0] + ratio * bbox[2]
-    y1 = (1 - ratio) * bbox[1] + ratio * bbox[3]
-    x2 = ratio * bbox[0] + (1 - ratio) * bbox[2]
-    y2 = ratio * bbox[1] + (1 - ratio) * bbox[3]
-    if use_round:
-        x1, y1, x2, y2 = [torch.round(x).long() for x in [x1, y1, x2, y2]]
+    x1 = torch.round((1 - ratio) * bbox[0] + ratio * bbox[2]).long()
+    y1 = torch.round((1 - ratio) * bbox[1] + ratio * bbox[3]).long()
+    x2 = torch.round(ratio * bbox[0] + (1 - ratio) * bbox[2]).long()
+    y2 = torch.round(ratio * bbox[1] + (1 - ratio) * bbox[3]).long()
     if featmap_size is not None:
         x1 = x1.clamp(min=0, max=featmap_size[1] - 1)
         y1 = y1.clamp(min=0, max=featmap_size[0] - 1)

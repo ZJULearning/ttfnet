@@ -93,11 +93,11 @@ lr_config = dict(
     policy='step',
     warmup='linear',
     warmup_iters=500,
-    warmup_ratio=1.0 / 10,
+    warmup_ratio=1.0 / 5,
     step=[9, 11])
 checkpoint_config = dict(interval=4)
 log_config = dict(
-    interval=50,
+    interval=20,
     hooks=[
         dict(type='TextLoggerHook'),
     ])
@@ -108,6 +108,6 @@ device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
 work_dir = 'work_dirs/ttfnet53_1x'
-load_from = None 
+load_from = None
 resume_from = None
 workflow = [('train', 1)]

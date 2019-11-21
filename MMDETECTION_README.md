@@ -85,7 +85,7 @@ v0.5.1 (20/10/2018)
 ## Benchmark and model zoo
 
 Supported methods and backbones are shown in the below table.
-Results and models are available in the [Model zoo](MODEL_ZOO.md).
+Results and models are available in the [Model zoo](docs/MODEL_ZOO.md).
 
 |                    | ResNet   | ResNeXt  | SENet    | VGG      | HRNet |
 |--------------------|:--------:|:--------:|:--------:|:--------:|:-----:|
@@ -100,6 +100,7 @@ Results and models are available in the [Model zoo](MODEL_ZOO.md).
 | GHM                | ✓        | ✓        | ☐        | ✗        | ✓     |
 | Mask Scoring R-CNN | ✓        | ✓        | ☐        | ✗        | ✓     |
 | FCOS               | ✓        | ✓        | ☐        | ✗        | ✓     |
+| Double-Head R-CNN  | ✓        | ✓        | ☐        | ✗        | ✓     |
 | Grid R-CNN (Plus)  | ✓        | ✓        | ☐        | ✗        | ✓     |
 | Hybrid Task Cascade| ✓        | ✓        | ☐        | ✗        | ✓     |
 | Libra R-CNN        | ✓        | ✓        | ☐        | ✗        | ✓     |
@@ -118,16 +119,16 @@ Other features
 
 ## Installation
 
-Please refer to [INSTALL.md](INSTALL.md) for installation and dataset preparation.
+Please refer to [INSTALL.md](docs/INSTALL.md) for installation and dataset preparation.
 
 
 ## Get Started
 
-Please see [GETTING_STARTED.md](GETTING_STARTED.md) for the basic usage of MMDetection.
+Please see [GETTING_STARTED.md](docs/GETTING_STARTED.md) for the basic usage of MMDetection.
 
 ## Contributing
 
-We appreciate all contributions to improve MMDetection. Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for the contributing guideline.
+We appreciate all contributions to improve MMDetection. Please refer to [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the contributing guideline.
 
 ## Acknowledgement
 
@@ -142,12 +143,14 @@ If you use this toolbox or benchmark in your research, please cite this project.
 ```
 @article{mmdetection,
   title   = {{MMDetection}: Open MMLab Detection Toolbox and Benchmark},
-  author  = {Kai Chen, Jiaqi Wang, Jiangmiao Pang, Yuhang Cao, Yu Xiong, Xiaoxiao Li,
-             Shuyang Sun, Wansen Feng, Ziwei Liu, Jiarui Xu, Zheng Zhang, Dazhi Cheng,
-             Chenchen Zhu, Tianheng Cheng, Qijie Zhao, Buyu Li, Xin Lu, Rui Zhu, Yue Wu,
-             Jifeng Dai, Jingdong Wang, Jianping Shi, Wanli Ouyang, Chen Change Loy, Dahua Lin},
-  journal = {arXiv preprint arXiv:1906.07155},
-  year    = {2019}
+  author  = {Chen, Kai and Wang, Jiaqi and Pang, Jiangmiao and Cao, Yuhang and
+             Xiong, Yu and Li, Xiaoxiao and Sun, Shuyang and Feng, Wansen and
+             Liu, Ziwei and Xu, Jiarui and Zhang, Zheng and Cheng, Dazhi and
+             Zhu, Chenchen and Cheng, Tianheng and Zhao, Qijie and Li, Buyu and
+             Lu, Xin and Zhu, Rui and Wu, Yue and Dai, Jifeng and Wang, Jingdong
+             and Shi, Jianping and Ouyang, Wanli and Loy, Chen Change and Lin, Dahua},
+  journal= {arXiv preprint arXiv:1906.07155},
+  year={2019}
 }
 ```
 

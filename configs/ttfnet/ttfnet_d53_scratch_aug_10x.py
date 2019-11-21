@@ -3,22 +3,22 @@ model = dict(
     type='TTFNet',
     pretrained=None,
     backbone=dict(
-        type='ResNet',
-        depth=18,
-        num_stages=4,
-        out_indices=(0, 1, 2, 3),
+        type='DarknetV3',
+        layers=[1, 2, 8, 8, 4],
+        inplanes=[3, 32, 64, 128, 256, 512],
+        planes=[32, 64, 128, 256, 512, 1024],
+        norm_cfg=dict(type='BN'),
+        out_indices=(1, 2, 3, 4),
         frozen_stages=-1,
-        norm_eval=False,
-        zero_init_residual=False,
-        style='pytorch'),
+        norm_eval=False),
     neck=None,
     bbox_head=dict(
         type='TTFHead',
-        inplanes=(64, 128, 256, 512),
+        inplanes=(128, 256, 512, 1024),
         head_conv=128,
         wh_conv=64,
         hm_head_conv_num=2,
-        wh_head_conv_num=1,
+        wh_head_conv_num=2,
         num_classes=81,
         wh_offset_base=16,
         wh_agnostic=True,
@@ -60,8 +60,9 @@ train_pipeline = [
         min_ious=(0.1, 0.3, 0.5, 0.7, 0.9),
         min_crop_size=0.3),
     dict(type='Resize', img_scale=(512, 512), keep_ratio=False),
-    dict(type='Normalize', **img_norm_cfg),
     dict(type='RandomFlip', flip_ratio=0.5),
+    dict(type='Normalize', **img_norm_cfg),
+    dict(type='Pad', size_divisor=32),
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
@@ -81,8 +82,8 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    imgs_per_gpu=16,
-    workers_per_gpu=4,
+    imgs_per_gpu=12,
+    workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/instances_train2017.json',
@@ -99,7 +100,7 @@ data = dict(
         img_prefix=data_root + 'val2017/',
         pipeline=test_pipeline))
 # optimizer
-optimizer = dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0004,
+optimizer = dict(type='SGD', lr=0.015, momentum=0.9, weight_decay=0.0004,
                  paramwise_options=dict(bias_lr_mult=2., bias_decay_mult=0.))
 optimizer_config = dict(grad_clip=dict(max_norm=35, norm_type=2))
 # learning policy
@@ -108,21 +109,20 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=1.0 / 5,
-    step=[63, 77])
-checkpoint_config = dict(save_every_n_steps=200, max_to_keep=1, keep_in_n_epoch=[63])
-bbox_head_hist_config = dict(
-    model_type=['ConvModule', 'DeformConvPack'],
-    sub_modules=['bbox_head'],
-    save_every_n_steps=200)
-# yapf:disable
-log_config = dict(interval=20)
+    step=[90, 110])
+checkpoint_config = dict(interval=40)
+log_config = dict(
+    interval=20,
+    hooks=[
+        dict(type='TextLoggerHook'),
+    ])
 # yapf:enable
 # runtime settings
-total_epochs = 84
+total_epochs = 120
 device_ids = range(8)
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-work_dir = './work_dirs/ttfnet18_aug_7x'
+work_dir = './work_dirs/ttfnet53_scratch_aug_10x'
 load_from = None
-resume_from = 'work_dirs/1909/1001_ttf18_scratch_aug_normlr_5x/work_dirs/ttfnet18_1x_1002_0003/epoch_45.pth'
+resume_from = None
 workflow = [('train', 1)]
