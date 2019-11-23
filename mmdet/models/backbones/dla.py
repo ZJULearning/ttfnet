@@ -3,12 +3,9 @@ import torch.nn as nn
 
 from mmcv.cnn import constant_init, kaiming_init
 from mmcv.runner import load_checkpoint
-from collections import OrderedDict
-from mmdet.models.utils import build_norm_layer
 
 from mmdet.models.registry import BACKBONES
 
-import os
 import math
 import logging
 import numpy as np
@@ -249,14 +246,6 @@ class DLA(nn.Module):
         self.level5 = Tree(levels[5], block, channels[4], channels[5], 2,
                            level_root=True, root_residual=residual_root)
 
-        # for m in self.modules():
-        #     if isinstance(m, nn.Conv2d):
-        #         n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-        #         m.weight.data.normal_(0, math.sqrt(2. / n))
-        #     elif isinstance(m, nn.BatchNorm2d):
-        #         m.weight.data.fill_(1)
-        #         m.bias.data.zero_()
-
     def _make_level(self, block, inplanes, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or inplanes != planes:
@@ -313,8 +302,6 @@ def dla34(pretrained=True, **kwargs):  # DLA-34
     model = DLA([1, 1, 1, 2, 2, 1],
                 [16, 32, 64, 128, 256, 512],
                 block=BasicBlock, **kwargs)
-    if pretrained:
-        model.load_pretrained_model(data='imagenet', name='dla34', hash='ba72cf86')
     return model
 
 class Identity(nn.Module):
@@ -432,9 +419,10 @@ class Interpolate(nn.Module):
 class DLASeg(nn.Module):
     
     def __init__(self, base_name, heads, pretrained, down_ratio, final_kernel,
-                 last_level, head_conv, out_channel=0):
+                 last_level, head_conv, out_channel=0, zero_init_residual=True):
         super(DLASeg, self).__init__()
         assert down_ratio in [2, 4, 8, 16]
+        self.zero_init_residual = zero_init_residual
         self.first_level = int(np.log2(down_ratio))
         self.last_level = last_level
         self.base = globals()[base_name](pretrained=pretrained)
@@ -447,36 +435,28 @@ class DLASeg(nn.Module):
 
         self.ida_up = IDAUp(out_channel, channels[self.first_level:self.last_level], 
                             [2 ** i for i in range(self.last_level - self.first_level)])
-        
-        # self.heads = heads
-        # for head in self.heads:
-        #     classes = self.heads[head]
-        #     if head_conv > 0:
-        #       fc = nn.Sequential(
-        #           nn.Conv2d(channels[self.first_level], head_conv,
-        #             kernel_size=3, padding=1, bias=True),
-        #           nn.ReLU(inplace=True),
-        #           nn.Conv2d(head_conv, classes, 
-        #             kernel_size=final_kernel, stride=1, 
-        #             padding=final_kernel // 2, bias=True))
-        #       if 'hm' in head:
-        #         fc[-1].bias.data.fill_(-2.19)
-        #       else:
-        #         fill_fc_weights(fc)
-        #     else:
-        #       fc = nn.Conv2d(channels[self.first_level], classes, 
-        #           kernel_size=final_kernel, stride=1, 
-        #           padding=final_kernel // 2, bias=True)
-        #       if 'hm' in head:
-        #         fc.bias.data.fill_(-2.19)
-        #       else:
-        #         fill_fc_weights(fc)
-        #     self.__setattr__(head, fc)
 
     def init_weights(self, pretrained=None):
         if isinstance(pretrained, str):
             logger = logging.getLogger()
-            load_checkpoint(self, pretrained, strict=False, logger=logger)
+            load_checkpoint(self.base, pretrained, strict=False, logger=logger)
+        else:
+            for m in self.modules():
+                if isinstance(m, nn.Conv2d):
+                    kaiming_init(m)
+                elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                    constant_init(m, 1)
+
+            for m in self.modules():
+                if isinstance(m, (BasicBlock, Bottleneck)) and hasattr(m, 'conv_offset_mask'):
+                    constant_init(m.conv_offset_mask, 0)
+
+            if self.zero_init_residual:
+                for m in self.modules():
+                    if isinstance(m, Bottleneck):
+                        constant_init(m.bn3, 0)
+                    elif isinstance(m, BasicBlock):
+                        constant_init(m.bn2, 0)
 
     def forward(self, x):
         x = self.base(x)
@@ -487,7 +467,4 @@ class DLASeg(nn.Module):
             y.append(x[i].clone())
         self.ida_up(y, 0, len(y))
 
-        # z = {}
-        # for head in self.heads:
-        #     z[head] = self.__getattr__(head)(y[-1])
         return y 

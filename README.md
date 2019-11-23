@@ -28,16 +28,21 @@ Note that the darknet part was transplanted (i.e., MXNet => Pytorch) from anothe
 
 We provide the following converged models. 
 
-| Model           | Training Hours | FPS   | AP(minival) | Link                                                         |
-| --------------- | -------------- | ----- | ----------- | ------------------------------------------------------------ |
-| TTFNet-18 (1x)  | 1.8            | 112.2 | 25.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_1x-fe6884.pth) |
-| TTFNet-18 (2x)  | 3.6            | 112.3 | 28.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_2x-37373a.pth) |
-| TTFNet-34 (2x)  | 4.1            | 86.6  | 31.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet34_2x-0577d0.pth) |
-| TTFNet-53 (1x)  | 3.1            | 54.8  | 32.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_1x-4811e4.pth) |
-| TTFNet-53 (2x)  | 6.1            | 54.4  | 35.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_2x-b381dd.pth) |
-| TTFNet-53 (10x) | 30.6           | 57.0  | 39.3        | Coming soon                                                  |
+| Model                       | Training Hours | FPS   | AP(minival) | Link                                                         |
+| --------------------------- | -------------- | ----- | ----------- | ------------------------------------------------------------ |
+| TTFNet-18 (1x)              | 1.8            | 112.2 | 25.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_1x-fe6884.pth) |
+| TTFNet-18 (2x)              | 3.6            | 112.3 | 28.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet18_2x-37373a.pth) |
+| TTFNet-18 (no-pretrain 10x) | -              | 121.0 | 30.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf18_scratch_aug_10x-4dd327cf.pth) |
+| TTFNet-18 (10x)             | -              | 113.6 | 31.8        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf18_aug_10x-0c5709be.pth) |
+| TTFNet-34 (2x)              | 4.1            | 86.6  | 31.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet34_2x-0577d0.pth) |
+| TTFNet-34 (no-pretrain 10x) | -              | 89.2  | 33.2        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf34_scratch_aug_10x-da045e42.pth) |
+| TTFNet-34 (10x)             | -              | 88.4  | 35.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf34_aug_10x-b394ba77.pth) |
+| TTFNet-53 (1x)              | 3.1            | 54.8  | 32.9        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_1x-4811e4.pth) |
+| TTFNet-53 (2x)              | 6.1            | 54.4  | 35.1        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttfnet53_2x-b381dd.pth) |
+| TTFNet-53 (no-pretrain 10x) | -              | 57.2  | 36.2        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf53_scratch_aug_10x-56878a40.pth) |
+| TTFNet-53 (10x)             | 30.6           | 57.0  | 39.3        | [Download](http://downloads.zjulearning.org.cn/ttfnet/ttf53_aug_10x-86c43dd3.pth) |
 
-We also provide the pretrained [Darknet53](http://downloads.zjulearning.org.cn/ttfnet/darknet53_pretrain-9ec35d.pth) here. 
+We also provide the pretrained [Darknet53](http://downloads.zjulearning.org.cn/ttfnet/darknet53_pretrain-9ec35d.pth) and [DLA-34](http://downloads.zjulearning.org.cn/ttfnet/dla34-ba72cf86.pth) here. 
 
 The following command will evaluate converged TTFNet-53 on 8 GPUs:
 
@@ -56,8 +61,6 @@ The following commands will train TTFNet-18 on 8 GPUs for 24 epochs and TTFNet-5
 ```
 ./tools/dist_train.sh configs/ttfnet/ttfnet_d53_1x.py 8
 ```
-
-We will provide the pretrained DLA-34 soon.
 
 ## Citations
 

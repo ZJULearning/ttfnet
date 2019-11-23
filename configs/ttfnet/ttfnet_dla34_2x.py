@@ -1,7 +1,7 @@
 # model settings
 model = dict(
     type='TTFNet',
-    pretrained='/pretrain/dla34-ba72cf86.pth',
+    pretrained='./pretrain/dla34-ba72cf86.pth',
     backbone=dict(
         type='DLASeg',
         base_name='dla34',
