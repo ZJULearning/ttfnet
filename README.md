@@ -20,7 +20,7 @@ All the training time is measured on 8 GTX 1080Ti, and all the inference speed i
 
 
 ## Installation
-Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). Please check [INSTALL.md](INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md). We will submit a pull request soon. 
+Our TTFNet is based on [mmdetection](https://github.com/open-mmlab/mmdetection). Please check [INSTALL.md](docs/INSTALL.md) for installation instructions, and you may want to see the original [README.md](MMDETECTION_README.md). We will submit a pull request soon. 
 
 Note that the darknet part was transplanted (i.e., MXNet => Pytorch) from another toolbox [Gluoncv](https://github.com/dmlc/gluon-cv). In addition, portions of the code are borrowed from [CornerNet](https://github.com/princeton-vl/CornerNet) and [CenterNet](https://github.com/xingyizhou/CenterNet). Thanks for their work !
 
