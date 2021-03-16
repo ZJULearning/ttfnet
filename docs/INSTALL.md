@@ -35,8 +35,8 @@ conda install pytorch torchvision -c pytorch
 c. Clone the mmdetection repository.
 
 ```shell
-git clone https://github.com/open-mmlab/mmdetection.git
-cd mmdetection
+git clone https://github.com/ZJULearning/ttfnet.git
+cd ttfnet
 ```
 
 d. Install mmdetection (other dependencies will be installed automatically).
@@ -59,7 +59,7 @@ We provide a [Dockerfile](../docker/Dockerfile) to build an image.
 
 ```shell
 # build an image with PyTorch 1.1, CUDA 10.0 and CUDNN 7.5
-docker build -t mmdetection docker/
+docker build -t ttfnet docker/
 ```
 
 ### Prepare datasets
@@ -68,7 +68,7 @@ It is recommended to symlink the dataset root to `$MMDETECTION/data`.
 If your folder structure is different, you may need to change the corresponding paths in config files.
 
 ```
-mmdetection
+ttfnet
 ├── mmdet
 ├── tools
 ├── configs
