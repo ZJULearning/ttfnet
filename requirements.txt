@@ -1,4 +1,4 @@
-mmcv>=0.2.10
+mmcv==0.2.16
 numpy
 matplotlib
 six
